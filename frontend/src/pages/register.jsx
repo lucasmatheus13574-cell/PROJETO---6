@@ -11,22 +11,24 @@ function Register() {
     const [mensagem, setMensagem] = useState("");
 
 
-    const registrar = async () => {
-        const response = await fetch("http://localhost:3000/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password, confirmpassword })
-        });
+const API_URL = import.meta.env.VITE_API_URL;
 
-        const data = await response.json();
-        setMensagem(data.message);
+const registrar = async () => {
+    const response = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, confirmpassword })
+    });
 
-        if (response.ok) {
-            setTimeout(() => {
-                navigate("/login");
-            }, 1500);
-        }
-    };
+    const data = await response.json();
+    setMensagem(data.message);
+
+    if (response.ok) {
+        setTimeout(() => {
+            navigate("/login");
+        }, 1500);
+    }
+};
 
     return (
         <div className="auth-container">
