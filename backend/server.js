@@ -1,8 +1,8 @@
-import express from "express";
-import cors from "cors";
-import bcryptjs from "bcryptjs";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
+const express = require ("express");
+const  cors =  require ("cors");
+const  bcryptjs = require ("bcryptjs");
+const  jwt = require ("jsonwebtoken");
+const  dotenv = require ("dotenv");
 
 dotenv.config();
   

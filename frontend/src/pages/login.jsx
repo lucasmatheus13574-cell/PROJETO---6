@@ -10,11 +10,11 @@ function Login() {
     const [mensagem, setMensagem] = useState("");
 
 
-const API_URL = import.meta.env.VITE_API_URL;          
+const API_URL  =  import.meta.env.VITE_API_URL;          
 
 
 
-    const logar = async () => {
+    const logar = async ()  => {
         const response = await fetch(`${API_URL}/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
