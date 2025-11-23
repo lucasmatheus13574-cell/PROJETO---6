@@ -2,30 +2,40 @@ import express from "express";
 import cors from "cors";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
-import sqlite3 from "sqlite3";
+import dotenv from "dotenv";
 
-const db = new sqlite3.Database("./database.db");
+dotenv.config();
+  
+const { Pool } = require("pg");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_URL }));
 app.use(express.json());
 
-const PORT = 3000;
-const SECRET = "segredo";
+const PORT = process.env.PORT || 3000;
+const SECRET = process.env.JWT_SECRET;
 
 
-db.run(
+
+
+pool.query(
   `CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       username TEXT UNIQUE,
       password TEXT
   )`
 );
 
 
-db.run(
+pool.query(
   `CREATE TABLE IF NOT EXISTS tarefas (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       userId INTEGER,
       tarefa TEXT,
       data TEXT,
@@ -65,7 +75,7 @@ app.post("/register", async (req, res) => {
 
   try {
     const hashed = await bcryptjs.hash(password, 10);
-    db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, hashed], (err) => {
+    pool.query("INSERT INTO users (username, password) VALUES ($1, $2)", [username, hashed], (err) => {
       if (err) return res.status(500).json({ message: "Usuário já existe!" });
       res.status(201).json({ message: "Usuário registrado com sucesso!" });
     });
@@ -78,7 +88,8 @@ app.post("/register", async (req, res) => {
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
 
-  db.get("SELECT * FROM users WHERE username = ?", [username], async (err, user) => {
+  pool.query("SELECT * FROM users WHERE username = $1", [username], async (err, result) => {
+    const user = result.rows[0];
     if (!user) return res.status(404).json({ message: "Usuário não encontrado!" });
 
     const valid = await bcryptjs.compare(password, user.password);
@@ -91,9 +102,9 @@ app.post("/login", (req, res) => {
 
 
 app.get("/tarefas", autenticarToken, (req, res) => {
-  db.all("SELECT * FROM tarefas WHERE userId = ?", [req.userId], (err, rows) => {
+  pool.query("SELECT * FROM tarefas WHERE userId = $1", [req.userId], (err, result) => {
     if (err) return res.status(500).json({ message: "Erro ao buscar tarefas!" });
-    res.json(rows);
+    res.json(result.rows);
   });
 });
 
@@ -104,8 +115,8 @@ app.post("/tarefas", autenticarToken, (req, res) => {
   if (!tarefa || !data || !prioridade)
     return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
 
-  db.run(
-    "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES (?, ?, ?, ?)",
+  pool.query(
+    "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES ($1, $2, $3, $4)",
     [req.userId, tarefa, data, prioridade],
     function (err) {
       if (err) return res.status(500).json({ message: "Erro ao adicionar!" });
@@ -123,8 +134,8 @@ app.put("/tarefas/:id", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
   const { id } = req.params;
 
-  db.run(
-    "UPDATE tarefas SET tarefa=?, data=?, prioridade=? WHERE id=? AND userId=?",
+  pool.query(
+    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3 WHERE id=$4 AND userId=$5",
     [tarefa, data, prioridade, id, req.userId],
     function (err) {
       if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
@@ -137,8 +148,8 @@ app.put("/tarefas/:id", autenticarToken, (req, res) => {
 app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
   const { id } = req.params;
 
-  db.run(
-    "UPDATE tarefas SET concluida=1 WHERE id=? AND userId=?",
+  pool.query(
+    "UPDATE tarefas SET concluida=1 WHERE id=$1 AND userId=$2",
     [id, req.userId],
     function (err) {
       if (err) return res.status(500).json({ message: "Erro ao concluir tarefa!" });
@@ -151,8 +162,8 @@ app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
 app.delete("/tarefas/:id", autenticarToken, (req, res) => {
   const { id } = req.params;
 
-  db.run(
-    "DELETE FROM tarefas WHERE id=? AND userId=?",
+  pool.query(
+    "DELETE FROM tarefas WHERE id=$1 AND userId=$2",
     [id, req.userId],
     function (err) {
       if (err) return res.status(500).json({ message: "Erro ao excluir tarefa!" });
