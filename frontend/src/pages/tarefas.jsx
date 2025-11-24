@@ -14,7 +14,7 @@ function Tarefas() {
   // Carregar tarefas ao entrar na página
   useEffect(() => {
     carregarTarefas();
-  }, []);
+  }, );
 
   // Buscar tarefas do backend
   const carregarTarefas = async () => {
