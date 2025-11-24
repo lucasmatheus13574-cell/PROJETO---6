@@ -16,7 +16,12 @@ const pool = new Pool({
 
 const app = express();
 
-app.use(cors({ origin: process.env.FRONTEND_URL }));
+app.use(cors({
+  origin: "*",
+  methods: "GET,POST,PUT,DELETE",
+  allowedHeaders: "Content-Type, Authorization"
+}));
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -69,7 +74,7 @@ app.post("/register", async (req, res) => {
   if (password !== confirmpassword)
     return res.status(400).json({ message: "Senhas não coincidem!" });
 
-  if (password,confirmpassword.length < 6)
+  if (password.length < 6 || confirmpassword.length < 6)
     return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres!" });
 
   
@@ -171,6 +176,12 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
       res.json({ message: "Tarefa removida!" });
     }
   );
+});
+
+
+
+app.get("/", (req, res) => {
+  res.send("Backend ativo!");
 });
 
 
