@@ -15,7 +15,7 @@ function Tarefas() {
 
   useEffect(() => {
     carregarTarefas();
-  }, );
+  }, []);
 
   const carregarTarefas = async () => {
     try {
