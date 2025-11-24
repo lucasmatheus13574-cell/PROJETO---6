@@ -8,14 +8,12 @@ dotenv.config();
 
 const { Pool } = require("pg");
 
-
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
 const app = express();
-
 
 app.use(
   cors({
@@ -26,6 +24,7 @@ app.use(
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
   next();
 });
 
@@ -33,7 +32,6 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
-
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS users (
@@ -54,7 +52,6 @@ pool.query(`
     FOREIGN KEY(userId) REFERENCES users(id)
   )
 `);
-
 
 function autenticarToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -117,7 +114,6 @@ app.post("/login", (req, res) => {
   );
 });
 
-
 app.get("/tarefas", autenticarToken, (req, res) => {
   pool.query(
     "SELECT * FROM tarefas WHERE userId = $1",
@@ -128,7 +124,6 @@ app.get("/tarefas", autenticarToken, (req, res) => {
     }
   );
 });
-
 
 app.post("/tarefas", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
@@ -147,7 +142,6 @@ app.post("/tarefas", autenticarToken, (req, res) => {
   );
 });
 
-
 app.put("/tarefas/:id", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
   const { id } = req.params;
@@ -162,7 +156,6 @@ app.put("/tarefas/:id", autenticarToken, (req, res) => {
   );
 });
 
-
 app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
   const { id } = req.params;
 
@@ -175,7 +168,6 @@ app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
     }
   );
 });
-
 
 app.delete("/tarefas/:id", autenticarToken, (req, res) => {
   const { id } = req.params;
@@ -193,7 +185,6 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 app.get("/", (req, res) => {
   res.send("Backend ativo!");
 });
-
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

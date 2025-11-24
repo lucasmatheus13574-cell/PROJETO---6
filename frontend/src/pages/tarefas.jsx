@@ -9,9 +9,8 @@ function Tarefas() {
   const [editId, setEditId] = useState(null);
   const navigate = useNavigate();
 
-
   const API_URL = import.meta.env.VITE_API_URL;
-
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     carregarTarefas();
@@ -21,7 +20,9 @@ function Tarefas() {
     try {
       const response = await fetch(`${API_URL}/tarefas`, {
         method: "GET",
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
       });
 
       if (!response.ok) return;
@@ -33,20 +34,28 @@ function Tarefas() {
     }
   };
 
-  
   const salvarTarefa = async () => {
     if (!nome || !descricao) return alert("Preencha todos os campos!");
 
-    const novaTarefa = { nome, descricao };
-    const url = editId ? `${API_URL}/tarefas/${editId}` : `${API_URL}/tarefas`;
+    const novaTarefa = {
+      tarefa: nome,
+      data: descricao,
+      prioridade: "normal"
+    };
+
+    const url = editId
+      ? `${API_URL}/tarefas/${editId}`
+      : `${API_URL}/tarefas`;
 
     const method = editId ? "PUT" : "POST";
 
     try {
       const response = await fetch(url, {
         method: method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(novaTarefa),
       });
 
@@ -64,12 +73,11 @@ function Tarefas() {
     }
   };
 
-  
   const removerTarefa = async (id) => {
     try {
       const response = await fetch(`${API_URL}/tarefas/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!response.ok) return;
@@ -80,12 +88,11 @@ function Tarefas() {
     }
   };
 
-  
   const concluirTarefa = async (id) => {
     try {
       const response = await fetch(`${API_URL}/tarefas/concluir/${id}`, {
         method: "PUT",
-        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!response.ok) return;
@@ -96,7 +103,6 @@ function Tarefas() {
     }
   };
 
-  
   const sair = () => {
     navigate("/login");
   };
@@ -130,8 +136,8 @@ function Tarefas() {
       <ul className="tarefas-lista">
         {tarefas.map((tarefa) => (
           <li key={tarefa.id} className={tarefa.concluida ? "concluida" : ""}>
-            <h3>{tarefa.nome}</h3>
-            <p>{tarefa.descricao}</p>
+            <h3>{tarefa.tarefa}</h3>
+            <p>{tarefa.data}</p>
 
             <div className="acoes">
               <button onClick={() => concluirTarefa(tarefa.id)}>
@@ -141,8 +147,8 @@ function Tarefas() {
               <button
                 onClick={() => {
                   setEditId(tarefa.id);
-                  setNome(tarefa.nome);
-                  setDescricao(tarefa.descricao);
+                  setNome(tarefa.tarefa);
+                  setDescricao(tarefa.data);
                 }}
               >
                 Editar
