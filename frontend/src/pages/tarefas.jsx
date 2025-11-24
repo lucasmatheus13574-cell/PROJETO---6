@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "../styles/Tarefas.css";
 
 function Tarefas() {
   const [tarefas, setTarefas] = useState([]);
@@ -8,15 +9,14 @@ function Tarefas() {
   const [editId, setEditId] = useState(null);
   const navigate = useNavigate();
 
-  // 👉 IMPORTANTE: Backend URL para Vercel + Render
+
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Carregar tarefas ao entrar na página
+
   useEffect(() => {
     carregarTarefas();
   }, );
 
-  // Buscar tarefas do backend
   const carregarTarefas = async () => {
     try {
       const response = await fetch(`${API_URL}/tarefas`, {
@@ -33,7 +33,7 @@ function Tarefas() {
     }
   };
 
-  // Criar ou editar tarefa
+  
   const salvarTarefa = async () => {
     if (!nome || !descricao) return alert("Preencha todos os campos!");
 
@@ -64,7 +64,7 @@ function Tarefas() {
     }
   };
 
-  // Deletar tarefa
+  
   const removerTarefa = async (id) => {
     try {
       const response = await fetch(`${API_URL}/tarefas/${id}`, {
@@ -80,7 +80,7 @@ function Tarefas() {
     }
   };
 
-  // Concluir tarefa
+  
   const concluirTarefa = async (id) => {
     try {
       const response = await fetch(`${API_URL}/tarefas/concluir/${id}`, {
@@ -96,7 +96,7 @@ function Tarefas() {
     }
   };
 
-  // Logout
+  
   const sair = () => {
     navigate("/login");
   };
