@@ -17,10 +17,11 @@ const pool = new Pool({
 const app = express();
 
 app.use(cors({
-  origin: "*",
+  origin: "https://projeto6-frontend.vercel.app",
   methods: "GET,POST,PUT,DELETE",
-  allowedHeaders: "Content-Type, Authorization"
+  credentials: true
 }));
+
 
 app.use(express.json());
 
