@@ -15,7 +15,7 @@ function Tarefas() {
   useEffect(() => {
     if (!token) return navigate("/login");
     carregarTarefas();
-  }, []);
+  }, );
 
   const carregarTarefas = async () => {
     try {

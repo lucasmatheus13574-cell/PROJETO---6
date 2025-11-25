@@ -120,7 +120,7 @@ app.post("/login", (req, res) => {
       const valid = await bcryptjs.compare(password, user.password);
       if (!valid) return res.status(401).json({ message: "Senha incorreta!" });
 
-      const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "7d" });
+      const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "1h" });
 
       res.json({ message: "Login OK!", token });
     }

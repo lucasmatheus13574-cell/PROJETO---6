@@ -12,7 +12,7 @@ function Login() {
 
     const logar = async () => {
         try {
-            const response = await fetch(`${API_URL}/login`, {
+            const response = await fetch("https://projeto-backend-2lg9.onrender.com/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, password })
