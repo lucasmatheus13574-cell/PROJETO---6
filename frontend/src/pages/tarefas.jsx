@@ -17,7 +17,7 @@ function Tarefas() {
         const carregarTarefas = async () => {
             if (!token) return;
             
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -33,7 +33,7 @@ function Tarefas() {
     }, [token]);
 
     const carregarTarefas = async () => {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas`, {
             headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -58,8 +58,8 @@ function Tarefas() {
         const body = { tarefa, data, prioridade };
 
         const url = editId
-            ? `${import.meta.env.VITE_API_URL}/tarefas/${editId}`
-            : `${import.meta.env.VITE_API_URL}/tarefas`;
+            ? `${import.meta.env.VITE_API_URL}/api/tarefas/${editId}`
+            : `${import.meta.env.VITE_API_URL}/api/tarefas`;
 
         const method = editId ? "PUT" : "POST";
 
@@ -107,7 +107,7 @@ function Tarefas() {
             cancelButtonText: "Cancelar"
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas/${id}`, {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas/${id}`, {
                     method: "DELETE",
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -128,7 +128,7 @@ function Tarefas() {
     };
 
 const concluirTarefa = async (id) => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas/concluir/${id}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas/concluir/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
     });
