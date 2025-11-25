@@ -13,6 +13,7 @@ function Tarefas() {
   const token = localStorage.getItem("token");
 
   useEffect(() => {
+    if (!token) return navigate("/login");
     carregarTarefas();
   }, []);
 
@@ -25,7 +26,10 @@ function Tarefas() {
         }
       });
 
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.log("Erro:", response.status);
+        return;
+      }
 
       const data = await response.json();
       setTarefas(data);
@@ -75,12 +79,10 @@ function Tarefas() {
 
   const removerTarefa = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/tarefas/${id}`, {
+      await fetch(`${API_URL}/tarefas/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (!response.ok) return;
 
       carregarTarefas();
     } catch (error) {
@@ -90,12 +92,10 @@ function Tarefas() {
 
   const concluirTarefa = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/tarefas/concluir/${id}`, {
+      await fetch(`${API_URL}/tarefas/concluir/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (!response.ok) return;
 
       carregarTarefas();
     } catch (error) {
@@ -104,6 +104,7 @@ function Tarefas() {
   };
 
   const sair = () => {
+    localStorage.removeItem("token");
     navigate("/login");
   };
 

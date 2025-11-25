@@ -11,18 +11,25 @@ function Login() {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const logar = async () => {
-        const response = await fetch(`${API_URL}/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password })
-        });
+        try {
+            const response = await fetch(`${API_URL}/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
 
-        const data = await response.json();
-        setMensagem(data.message);
+            const data = await response.json();
+            setMensagem(data.message);
 
-        if (data.token) {
-            localStorage.setItem("token", data.token);
-            navigate("/tarefas");
+            if (!response.ok) return;
+
+            // 💡 GARANTE O TOKEN
+            if (data.token) {
+                localStorage.setItem("token", data.token);
+                navigate("/tarefas");
+            }
+        } catch (err) {
+            console.log("Erro no login:", err);
         }
     };
 
