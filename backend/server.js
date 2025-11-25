@@ -22,22 +22,7 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
-  next();
-});
-
 app.use(express.json());
-
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-  next();
-});
 
 
 
@@ -52,7 +37,9 @@ pool.query(`
     username TEXT UNIQUE,
     password TEXT
   )
-`);
+`, (err) => {
+  if (err) console.error("Erro ao criar tabela users:", err);
+});
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS tarefas (
@@ -64,7 +51,9 @@ pool.query(`
     concluida INTEGER DEFAULT 0,
     FOREIGN KEY(userId) REFERENCES users(id)
   )
-`);
+`, (err) => {
+  if (err) console.error("Erro ao criar tabela tarefas:", err);
+});
 
 function autenticarToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -83,7 +72,7 @@ function autenticarToken(req, res, next) {
 app.post("/api/register", async (req, res) => {
   const { username, password, confirmpassword } = req.body;
 
-  if (!username || !password)
+  if (!username || !username.trim() || !password)
     return res.status(400).json({ message: "Nome e senha obrigatórios!" });
 
   if (password !== confirmpassword)
@@ -96,7 +85,7 @@ app.post("/api/register", async (req, res) => {
     const hashed = await bcryptjs.hash(password, 10);
     pool.query(
       "INSERT INTO users (username, password) VALUES ($1, $2)",
-      [username, hashed],
+      [username.trim(), hashed],
       (err) => {
         if (err) return res.status(500).json({ message: "Usuário já existe!" });
         res.status(201).json({ message: "Usuário registrado com sucesso!" });
@@ -110,9 +99,12 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
 
+  if (!username || !username.trim() || !password)
+    return res.status(400).json({ message: "Usuário e senha são obrigatórios!" });
+
   pool.query(
     "SELECT * FROM users WHERE username = $1",
-    [username],
+    [username.trim()],
     async (err, result) => {
       if (err) return res.status(500).json({ message: "Erro no servidor!" });
       
@@ -143,12 +135,12 @@ app.get("/api/tarefas", autenticarToken, (req, res) => {
 app.post("/api/tarefas", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
 
-  if (!tarefa || !data || !prioridade)
+  if (!tarefa || !tarefa.trim() || !data || !prioridade)
     return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
 
   pool.query(
     "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES ($1, $2, $3, $4)",
-    [req.userId, tarefa, data, prioridade],
+    [req.userId, tarefa.trim(), data, prioridade],
     (err) => {
       if (err) return res.status(500).json({ message: "Erro ao adicionar!" });
 
@@ -174,9 +166,12 @@ app.put("/api/tarefas/:id", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
   const { id } = req.params;
 
+  if (!tarefa || !tarefa.trim() || !data || !prioridade)
+    return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
+
   pool.query(
     "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3 WHERE id=$4 AND userId=$5",
-    [tarefa, data, prioridade, id, req.userId],
+    [tarefa.trim(), data, prioridade, id, req.userId],
     (err) => {
       if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
       res.json({ message: "Tarefa atualizada!" });

@@ -8,27 +8,53 @@ function Tarefas() {
     const [prioridade, setPrioridade] = useState("baixa");
     const [lista, setLista] = useState([]);
     const [editId, setEditId] = useState(null);
-    const [mensagem] = useState("");
     const [filtro, setFiltro] = useState("pendentes");
     const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
     const token = localStorage.getItem("token");
 
     useEffect(() => {
+        const carregarTarefas = async () => {
+            if (!token) return;
+            
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!res.ok) {
+                console.error("Erro ao carregar tarefas:", res.status);
+                return;
+            }
+            const data = await res.json();
+            setLista(data);
+        };
+
         carregarTarefas();
-    }, );
+    }, [token]);
 
     const carregarTarefas = async () => {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas`, {
             headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) return;
+        if (!res.ok) {
+            console.error("Erro ao carregar tarefas:", res.status);
+            return;
+        }
         const data = await res.json();
         setLista(data);
     };
 
     const salvarTarefa = async () => {
+        if (!tarefa.trim() || !data) {
+            Swal.fire({
+                icon: "warning",
+                title: "Campos incompletos!",
+                text: "Preencha tarefa e data.",
+            });
+            return;
+        }
+
         const body = { tarefa, data, prioridade };
 
         const url = editId
@@ -198,8 +224,6 @@ const logout = () => {
             <button className="input-btn" onClick={salvarTarefa}>
                 {editId ? "Salvar Edição" : "Adicionar Tarefa"}
             </button>
-
-            {mensagem && <p>{mensagem}</p>}
 
             <h3>Filtros:</h3>
             <div className="filtros">

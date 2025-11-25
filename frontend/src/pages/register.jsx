@@ -14,19 +14,39 @@ function Register() {
 const API_URL = import.meta.env.VITE_API_URL;
 
 const registrar = async () => {
-    const response = await fetch(`${API_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, confirmpassword })
-    });
+    if (!username.trim() || !password.trim() || !confirmpassword.trim()) {
+        setMensagem("Todos os campos são obrigatórios!");
+        return;
+    }
 
-    const data = await response.json();
-    setMensagem(data.message);
+    if (password.length < 6) {
+        setMensagem("A senha deve ter pelo menos 6 caracteres!");
+        return;
+    }
 
-    if (response.ok) {
-        setTimeout(() => {
-            navigate("/login");
-        }, 1500);
+    if (password !== confirmpassword) {
+        setMensagem("As senhas não coincidem!");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password, confirmpassword })
+        });
+
+        const data = await response.json();
+        setMensagem(data.message);
+
+        if (response.ok) {
+            setTimeout(() => {
+                navigate("/login");
+            }, 1500);
+        }
+    } catch (err) {
+        console.log("Erro no registro:", err);
+        setMensagem("Erro ao conectar com o servidor!");
     }
 };
 

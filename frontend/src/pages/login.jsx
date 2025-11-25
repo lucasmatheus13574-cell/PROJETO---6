@@ -11,6 +11,11 @@ function Login() {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const logar = async () => {
+        if (!username.trim() || !password.trim()) {
+            setMensagem("Usuário e senha são obrigatórios!");
+            return;
+        }
+
         try {
             const response = await fetch(`${API_URL}/login`, {
                 method: "POST",
@@ -30,6 +35,7 @@ function Login() {
             }
         } catch (err) {
             console.log("Erro no login:", err);
+            setMensagem("Erro ao conectar com o servidor!");
         }
     };
 
