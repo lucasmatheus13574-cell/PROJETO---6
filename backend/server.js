@@ -80,7 +80,7 @@ function autenticarToken(req, res, next) {
   });
 }
 
-app.post("/register", async (req, res) => {
+app.post("/api/register", async (req, res) => {
   const { username, password, confirmpassword } = req.body;
 
   if (!username || !password)
@@ -107,13 +107,15 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/login", (req, res) => {
+app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
 
   pool.query(
     "SELECT * FROM users WHERE username = $1",
     [username],
     async (err, result) => {
+      if (err) return res.status(500).json({ message: "Erro no servidor!" });
+      
       const user = result.rows[0];
       if (!user) return res.status(404).json({ message: "Usuário não encontrado!" });
 
@@ -127,7 +129,7 @@ app.post("/login", (req, res) => {
   );
 });
 
-app.get("/tarefas", autenticarToken, (req, res) => {
+app.get("/api/tarefas", autenticarToken, (req, res) => {
   pool.query(
     "SELECT * FROM tarefas WHERE userId = $1",
     [req.userId],
@@ -138,7 +140,7 @@ app.get("/tarefas", autenticarToken, (req, res) => {
   );
 });
 
-app.post("/tarefas", autenticarToken, (req, res) => {
+app.post("/api/tarefas", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
 
   if (!tarefa || !data || !prioridade)
@@ -155,21 +157,7 @@ app.post("/tarefas", autenticarToken, (req, res) => {
   );
 });
 
-app.put("/tarefas/:id", autenticarToken, (req, res) => {
-  const { tarefa, data, prioridade } = req.body;
-  const { id } = req.params;
-
-  pool.query(
-    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3 WHERE id=$4 AND userId=$5",
-    [tarefa, data, prioridade, id, req.userId],
-    (err) => {
-      if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
-      res.json({ message: "Tarefa atualizada!" });
-    }
-  );
-});
-
-app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
+app.put("/api/tarefas/concluir/:id", autenticarToken, (req, res) => {
   const { id } = req.params;
 
   pool.query(
@@ -182,7 +170,20 @@ app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
   );
 });
 
-app.delete("/tarefas/:id", autenticarToken, (req, res) => {
+app.put("/api/tarefas/:id", autenticarToken, (req, res) => {
+  const { tarefa, data, prioridade } = req.body;
+  const { id } = req.params;
+
+  pool.query(
+    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3 WHERE id=$4 AND userId=$5",
+    [tarefa, data, prioridade, id, req.userId],
+    (err) => {
+      if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
+      res.json({ message: "Tarefa atualizada!" });
+    }
+  );
+});
+app.delete("/api/tarefas/:id", autenticarToken, (req, res) => {
   const { id } = req.params;
 
   pool.query(
