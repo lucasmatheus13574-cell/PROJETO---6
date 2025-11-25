@@ -1,171 +1,243 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/Tarefas.css";
+import Swal from "sweetalert2";
 
 function Tarefas() {
-  const [tarefas, setTarefas] = useState([]);
-  const [nome, setNome] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [editId, setEditId] = useState(null);
-  const navigate = useNavigate();
+    const [tarefa, setTarefa] = useState("");
+    const [data, setData] = useState("");
+    const [prioridade, setPrioridade] = useState("baixa");
+    const [lista, setLista] = useState([]);
+    const [editId, setEditId] = useState(null);
+    const [mensagem] = useState("");
+    const [filtro, setFiltro] = useState("pendentes");
+    const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
-  const API_URL = import.meta.env.VITE_API_URL;
-  const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-  useEffect(() => {
-    if (!token) return navigate("/login");
-    carregarTarefas();
-  }, );
+    useEffect(() => {
+        carregarTarefas();
+    }, );
 
-  const carregarTarefas = async () => {
-    try {
-      const response = await fetch(`${API_URL}/tarefas`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
-      });
+    const carregarTarefas = async () => {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
 
-      if (!response.ok) {
-        console.log("Erro:", response.status);
-        return;
-      }
-
-      const data = await response.json();
-      setTarefas(data);
-    } catch (error) {
-      console.error("Erro ao carregar tarefas:", error);
-    }
-  };
-
-  const salvarTarefa = async () => {
-    if (!nome || !descricao) return alert("Preencha todos os campos!");
-
-    const novaTarefa = {
-      tarefa: nome,
-      data: descricao,
-      prioridade: "normal"
+        if (!res.ok) return;
+        const data = await res.json();
+        setLista(data);
     };
 
-    const url = editId
-      ? `${API_URL}/tarefas/${editId}`
-      : `${API_URL}/tarefas`;
+    const salvarTarefa = async () => {
+        const body = { tarefa, data, prioridade };
 
-    const method = editId ? "PUT" : "POST";
+        const url = editId
+            ? `${import.meta.env.VITE_API_URL}/tarefas/${editId}`
+            : `${import.meta.env.VITE_API_URL}/tarefas`;
 
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(novaTarefa),
-      });
+        const method = editId ? "PUT" : "POST";
 
-      if (!response.ok) {
-        const erro = await response.json();
-        return alert(erro.message);
-      }
+        const response = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(body),
+        });
 
-      setNome("");
-      setDescricao("");
-      setEditId(null);
-      carregarTarefas();
-    } catch (error) {
-      console.error("Erro ao salvar tarefa:", error);
-    }
-  };
+        const result = await response.json();
 
-  const removerTarefa = async (id) => {
-    try {
-      await fetch(`${API_URL}/tarefas/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
+        if (response.ok) {
+            Swal.fire({
+                icon: "success",
+                title: editId ? "Tarefa editada!" : "Tarefa adicionada!",
+                text: result.message,
+                timer: 2000,
+                showConfirmButton: false,
+            });
 
-      carregarTarefas();
-    } catch (error) {
-      console.error("Erro ao deletar tarefa:", error);
-    }
-  };
+            carregarTarefas();
+            setTarefa("");
+            setData("");
+            setPrioridade("baixa");
+            setEditId(null);
+        } else {
+            Swal.fire({
+                icon: "error",
+                title: "Erro!",
+                text: result.message,
+            });
+        }
+    };
 
-  const concluirTarefa = async (id) => {
-    try {
-      await fetch(`${API_URL}/tarefas/concluir/${id}`, {
+    const removerTarefa = async (id) => {
+        Swal.fire({
+            title: "Tem certeza?",
+            text: "Essa tarefa será apagada definitivamente!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sim, excluir!",
+            cancelButtonText: "Cancelar"
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas/${id}`, {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (res.ok) {
+                    carregarTarefas();
+                    Swal.fire("Deletada!", "Sua tarefa foi removida.", "success");
+                }
+            }
+        });
+    };
+
+    const editarTarefa = (item) => {
+        setTarefa(item.tarefa);
+        setData(item.data);
+        setPrioridade(item.prioridade);
+        setEditId(item.id);
+    };
+
+const concluirTarefa = async (id) => {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/tarefas/concluir/${id}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}` }
-      });
+        headers: { Authorization: `Bearer ${token}` },
+    });
 
-      carregarTarefas();
-    } catch (error) {
-      console.error("Erro ao concluir tarefa:", error);
+
+    const result = await res.json();
+
+    if (res.ok) {
+        carregarTarefas();
+        Swal.fire({
+            icon: "success",
+            title: "Tarefa concluída! ✅",
+            timer: 1800,
+            showConfirmButton: false
+        });
+    } else {
+        Swal.fire({
+            icon: "error",
+            title: "Erro!",
+            text: result.message
+        });
     }
-  };
+};
 
-  const sair = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
 
-  return (
-    <div className="container">
-      <h1>Gerenciador de Tarefas</h1>
+const logout = () => {
+    Swal.fire({
+        title: "Deseja sair?",
+        text: "Você será desconectado da sua conta!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sim, sair",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.removeItem("token"); // remove o token salvo
+            Swal.fire({
+                icon: "success",
+                title: "Sessão encerrada!",
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                // Redireciona para login (ajuste o caminho conforme seu app)
+                window.location.href = "/login";
+            });
+        }
+    });
+};  
 
-      <div className="form">
-        <input
-          type="text"
-          placeholder="Nome da tarefa"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-        />
-        <textarea
-          placeholder="Descrição"
-          value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-        ></textarea>
 
-        <button onClick={salvarTarefa}>
-          {editId ? "Atualizar" : "Adicionar"}
-        </button>
 
-        {editId && (
-          <button onClick={() => setEditId(null)}>Cancelar edição</button>
-        )}
-      </div>
 
-      <ul className="tarefas-lista">
-        {tarefas.map((tarefa) => (
-          <li key={tarefa.id} className={tarefa.concluida ? "concluida" : ""}>
-            <h3>{tarefa.tarefa}</h3>
-            <p>{tarefa.data}</p>
+    const listaFiltrada = lista.filter((item) => {
+        if (filtro === "pendentes" && item.concluida === 1) return false;
+        if (filtro === "concluidas" && item.concluida === 0) return false;
+        if (filtroPrioridade !== "todas" && item.prioridade !== filtroPrioridade)
+            return false;
+        return true;
+    });
 
-            <div className="acoes">
-              <button onClick={() => concluirTarefa(tarefa.id)}>
-                {tarefa.concluida ? "Desmarcar" : "Concluir"}
-              </button>
+    return (
+        <div className="container">
+            <h1>Tarefas</h1>
+            <p>Bem-vindo à página de Tarefas!</p>
+            <div className="logout-area">
+    <button className="logout-btn" onClick={logout}>🚪 Logout</button>
+</div>
+            <input
+                type="text"
+                placeholder="Digite sua tarefa:"
+                className="input-text"
+                value={tarefa}
+                onChange={(e) => setTarefa(e.target.value)}
+            />
 
-              <button
-                onClick={() => {
-                  setEditId(tarefa.id);
-                  setNome(tarefa.tarefa);
-                  setDescricao(tarefa.data);
-                }}
-              >
-                Editar
-              </button>
+            <input
+                type="date"
+                className="input-date"
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+            />
 
-              <button onClick={() => removerTarefa(tarefa.id)}>Excluir</button>
+            <select
+                className="input-select"
+                value={prioridade}
+                onChange={(e) => setPrioridade(e.target.value)}
+            >
+                <option value="baixa">Baixa</option>
+                <option value="media">Média</option>
+                <option value="alta">Alta</option>
+            </select>
+
+            <button className="input-btn" onClick={salvarTarefa}>
+                {editId ? "Salvar Edição" : "Adicionar Tarefa"}
+            </button>
+
+            {mensagem && <p>{mensagem}</p>}
+
+            <h3>Filtros:</h3>
+            <div className="filtros">
+                <select className="filtro" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+                    <option value="pendentes">Pendentes</option>
+                    <option value="concluidas">Concluídas</option>
+                </select>
+
+                <select
+                    className="filtro"
+                    value={filtroPrioridade}
+                    onChange={(e) => setFiltroPrioridade(e.target.value)}
+                >
+                    <option value="todas">Todas Prioridades</option>
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                </select>
             </div>
-          </li>
-        ))}
-      </ul>
 
-      <button className="logout" onClick={sair}>
-        Sair
-      </button>
-    </div>
-  );
+            <h3>Tarefas:</h3>
+            <ul>
+                {listaFiltrada.map((item) => (
+                    <li
+                        key={item.id}
+                        className={item.concluida ? "concluida" : ""}
+                    >
+                        ✅ {item.tarefa} — {item.data} — {item.prioridade}
+                        <button onClick={() => editarTarefa(item)}>✏️ Editar</button>
+                        <button onClick={() => removerTarefa(item.id)}>❌ Excluir</button>
+                        {!item.concluida && (
+                            <button onClick={() => concluirTarefa(item.id)}>✔ Finalizar</button>
+                        )}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
 }
 
 export default Tarefas;
