@@ -30,7 +30,7 @@ const registrar = async () => {
     }
 
     try {
-        const response = await fetch(`${API_URL}/api/register`, {
+        const response = await fetch(`https://projeto-backend-2lg9.onrender.com/api/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, confirmpassword })

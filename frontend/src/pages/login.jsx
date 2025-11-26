@@ -17,7 +17,7 @@ function Login() {
         }
 
         try {
-            const response = await fetch(`${API_URL}/api/login`, {
+            const response = await fetch(`https://projeto-backend-2lg9.onrender.com/api/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, password })    

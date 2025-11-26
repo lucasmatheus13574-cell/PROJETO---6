@@ -17,7 +17,7 @@ function Tarefas() {
         const carregarTarefas = async () => {
             if (!token) return;
             
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas`, {
+            const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -33,7 +33,7 @@ function Tarefas() {
     }, [token]);
 
     const carregarTarefas = async () => {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas`, {
+        const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas`, {
             headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -58,8 +58,8 @@ function Tarefas() {
         const body = { tarefa, data, prioridade };
 
         const url = editId
-            ? `${import.meta.env.VITE_API_URL}/api/tarefas/${editId}`
-            : `${import.meta.env.VITE_API_URL}/api/tarefas`;
+            ? `https://projeto-backend-2lg9.onrender.com/api/tarefas/${editId}`
+            : `https://projeto-backend-2lg9.onrender.com/api/tarefas`;
 
         const method = editId ? "PUT" : "POST";
 
@@ -107,7 +107,7 @@ function Tarefas() {
             cancelButtonText: "Cancelar"
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas/${id}`, {
+                const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas/${id}`, {
                     method: "DELETE",
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -128,7 +128,7 @@ function Tarefas() {
     };
 
 const concluirTarefa = async (id) => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/tarefas/concluir/${id}`, {
+    const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas/concluir/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
     });
