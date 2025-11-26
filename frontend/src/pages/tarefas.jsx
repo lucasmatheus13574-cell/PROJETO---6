@@ -69,8 +69,8 @@ function Tarefas() {
         const body = { tarefa, data, prioridade };
 
         const url = editId
-            ? `https://projeto-backend-2lg9.onrender.com/api/tarefas/${editId}`
-            : `https://projeto-backend-2lg9.onrender.com/api/tarefas`;
+            ? `${API_URL}/tarefas/${editId}`
+            : `${API_URL}/tarefas`;
 
         const method = editId ? "PUT" : "POST";
 
