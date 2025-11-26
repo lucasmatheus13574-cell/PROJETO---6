@@ -17,26 +17,36 @@ function Login() {
         }
 
         try {
-            const response = await fetch(`https://projeto-backend-2lg9.onrender.com/api/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password })    
-            });
+                const response = await fetch(`${API_URL}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })    
+                });
 
-            const data = await response.json();
-            setMensagem(data.message);
+                const contentType = response.headers.get("content-type") || "";
+                let data = null;
+                if (contentType.includes("application/json")) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    console.warn("Resposta não-JSON ao logar:", text);
+                }
 
-            if (!response.ok) return;
+                if (data && data.message) setMensagem(data.message);
 
-            // 💡 GARANTE O TOKEN
-            if (data.token) {
-                localStorage.setItem("token", data.token);
-                navigate("/tarefas");
+                if (!response.ok) {
+                    setMensagem(data && data.message ? data.message : `Erro ${response.status}`);
+                    return;
+                }
+
+                if (data && data.token) {
+                    localStorage.setItem("token", data.token);
+                    navigate("/tarefas");
+                }
+            } catch (err) {
+                console.log("Erro no login:", err);
+                setMensagem("Erro ao conectar com o servidor!");
             }
-        } catch (err) {
-            console.log("Erro no login:", err);
-            setMensagem("Erro ao conectar com o servidor!");
-        }
     };
 
     return (

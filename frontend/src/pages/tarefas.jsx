@@ -12,12 +12,34 @@ function Tarefas() {
     const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
     const token = localStorage.getItem("token");
+    const API_URL = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const carregarTarefas = async () => {
             if (!token) return;
             
-            const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas`, {
+                const res = await fetch(`${API_URL}/tarefas`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (!res.ok) {
+                    console.error("Erro ao carregar tarefas:", res.status);
+                    return;
+                }
+                const contentType = res.headers.get("content-type") || "";
+                if (!contentType.includes("application/json")) {
+                    console.warn("Resposta não-JSON ao carregar tarefas");
+                    return;
+                }
+                const data = await res.json();
+                setLista(data);
+        };
+
+        carregarTarefas();
+    }, [token, API_URL]);
+
+    const carregarTarefas = async () => {
+        const res = await fetch(`${API_URL}/tarefas`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -25,24 +47,13 @@ function Tarefas() {
                 console.error("Erro ao carregar tarefas:", res.status);
                 return;
             }
+            const contentType = res.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) {
+                console.warn("Resposta não-JSON ao carregar tarefas");
+                return;
+            }
             const data = await res.json();
             setLista(data);
-        };
-
-        carregarTarefas();
-    }, [token]);
-
-    const carregarTarefas = async () => {
-        const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-            console.error("Erro ao carregar tarefas:", res.status);
-            return;
-        }
-        const data = await res.json();
-        setLista(data);
     };
 
     const salvarTarefa = async () => {
@@ -71,14 +82,20 @@ function Tarefas() {
             },
             body: JSON.stringify(body),
         });
-
-        const result = await response.json();
+        const contentType = response.headers.get("content-type") || "";
+        let result = null;
+        if (contentType.includes("application/json")) {
+            result = await response.json();
+        } else {
+            const text = await response.text();
+            console.warn("Resposta não-JSON ao salvar tarefa:", text);
+        }
 
         if (response.ok) {
             Swal.fire({
                 icon: "success",
                 title: editId ? "Tarefa editada!" : "Tarefa adicionada!",
-                text: result.message,
+                text: result ? result.message : undefined,
                 timer: 2000,
                 showConfirmButton: false,
             });
@@ -89,10 +106,10 @@ function Tarefas() {
             setPrioridade("baixa");
             setEditId(null);
         } else {
-            Swal.fire({
+                Swal.fire({
                 icon: "error",
                 title: "Erro!",
-                text: result.message,
+                text: result ? result.message : `Erro ${response.status}`,
             });
         }
     };
@@ -107,7 +124,7 @@ function Tarefas() {
             cancelButtonText: "Cancelar"
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas/${id}`, {
+                const res = await fetch(`${API_URL}/tarefas/${id}`, {
                     method: "DELETE",
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -115,6 +132,14 @@ function Tarefas() {
                 if (res.ok) {
                     carregarTarefas();
                     Swal.fire("Deletada!", "Sua tarefa foi removida.", "success");
+                } else {
+                    const ct = res.headers.get("content-type") || "";
+                    let msg = `Erro ${res.status}`;
+                    if (ct.includes("application/json")) {
+                        const j = await res.json();
+                        if (j && j.message) msg = j.message;
+                    }
+                    Swal.fire("Erro", msg, "error");
                 }
             }
         });
@@ -128,13 +153,14 @@ function Tarefas() {
     };
 
 const concluirTarefa = async (id) => {
-    const res = await fetch(`https://projeto-backend-2lg9.onrender.com/api/tarefas/concluir/${id}`, {
+    const res = await fetch(`${API_URL}/tarefas/concluir/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
     });
 
-
-    const result = await res.json();
+    const ct = res.headers.get("content-type") || "";
+    let result = null;
+    if (ct.includes("application/json")) result = await res.json();
 
     if (res.ok) {
         carregarTarefas();
@@ -148,7 +174,7 @@ const concluirTarefa = async (id) => {
         Swal.fire({
             icon: "error",
             title: "Erro!",
-            text: result.message
+            text: result ? result.message : `Erro ${res.status}`
         });
     }
 };

@@ -30,14 +30,22 @@ const registrar = async () => {
     }
 
     try {
-        const response = await fetch(`https://projeto-backend-2lg9.onrender.com/api/register`, {
+        const response = await fetch(`${API_URL}/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, confirmpassword })
         });
 
-        const data = await response.json();
-        setMensagem(data.message);
+        const contentType = response.headers.get("content-type") || "";
+        let data = null;
+        if (contentType.includes("application/json")) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            console.warn("Resposta não-JSON no register:", text);
+        }
+
+        if (data && data.message) setMensagem(data.message);
 
         if (response.ok) {
             setTimeout(() => {
