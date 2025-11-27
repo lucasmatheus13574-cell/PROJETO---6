@@ -4,9 +4,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/api': 'https://projeto-backend-2lg9.onrender.com',
-    },
     port: 5173,
   },
 });
