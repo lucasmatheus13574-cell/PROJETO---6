@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import "../styles/Tarefas.css";
 import Swal from "sweetalert2";
 
@@ -16,12 +16,7 @@ function Tarefas() {
     // Garante que a URL não tem barra no final
     const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
-    useEffect(() => {
-        if (!token) return;
-        carregarTarefas();
-    }, [token]);
-
-    const carregarTarefas = async () => {
+    const carregarTarefas = useCallback(async () => {
         try {
             const res = await fetch(`${API_URL}/tarefas`, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -43,9 +38,14 @@ function Tarefas() {
             setLista(data);
 
         } catch (err) {
-            console.log("Erro ao buscar tarefas:", err);
+            console.error("Erro ao buscar tarefas:", err);
         }
-    };
+    }, [API_URL, token]);
+
+    useEffect(() => {
+        if (!token) return;
+        carregarTarefas();
+    }, [carregarTarefas, token]);
 
     const salvarTarefa = async () => {
         if (!tarefa.trim() || !data) {
@@ -105,6 +105,7 @@ function Tarefas() {
             }
 
         } catch (err) {
+            console.error("Erro ao salvar tarefa:", err);
             Swal.fire({
                 icon: "error",
                 title: "Erro de conexão",
