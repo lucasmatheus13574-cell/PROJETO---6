@@ -18,7 +18,7 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "https://projeto6-frontend.vercel.app",
+      "https://projeto6-frontend.vercel.app/",
       "http://localhost:5173"
     ],
     credentials: true,
