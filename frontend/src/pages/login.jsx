@@ -8,7 +8,8 @@ function Login() {
     const [password, setPassword] = useState("");
     const [mensagem, setMensagem] = useState("");
 
-    const API_URL = import.meta.env.VITE_API_URL;
+    // Garante que a URL está correta
+    const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
     const logar = async () => {
         if (!username.trim() || !password.trim()) {
@@ -17,36 +18,38 @@ function Login() {
         }
 
         try {
-                const response = await fetch(`${API_URL}/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, password })    
-                });
+            const response = await fetch(`${API_URL}/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
 
-                const contentType = response.headers.get("content-type") || "";
-                let data = null;
-                if (contentType.includes("application/json")) {
-                    data = await response.json();
-                } else {
-                    const text = await response.text();
-                    console.warn("Resposta não-JSON ao logar:", text);
-                }
+            const tipo = response.headers.get("content-type") || "";
+            let data = null;
 
-                if (data && data.message) setMensagem(data.message);
-
-                if (!response.ok) {
-                    setMensagem(data && data.message ? data.message : `Erro ${response.status}`);
-                    return;
-                }
-
-                if (data && data.token) {
-                    localStorage.setItem("token", data.token);
-                    navigate("/tarefas");
-                }
-            } catch (err) {
-                console.log("Erro no login:", err);
-                setMensagem("Erro ao conectar com o servidor!");
+            if (tipo.includes("application/json")) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                console.warn("Resposta não JSON ao logar:", text);
             }
+
+            if (!response.ok) {
+                setMensagem(data?.message || `Erro ${response.status}`);
+                return;
+            }
+
+            if (data?.token) {
+                localStorage.setItem("token", data.token);
+                navigate("/tarefas");
+            }
+
+            if (data?.message) setMensagem(data.message);
+
+        } catch (err) {
+            console.log("Erro no login:", err);
+            setMensagem("Erro ao conectar com o servidor!");
+        }
     };
 
     return (

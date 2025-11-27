@@ -12,34 +12,18 @@ function Tarefas() {
     const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
     const token = localStorage.getItem("token");
-    const API_URL = import.meta.env.VITE_API_URL;
+
+    // Garante que a URL não tem barra no final
+    const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
     useEffect(() => {
-        const carregarTarefas = async () => {
-            if (!token) return;
-            
-                const res = await fetch(`${API_URL}/tarefas`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (!res.ok) {
-                    console.error("Erro ao carregar tarefas:", res.status);
-                    return;
-                }
-                const contentType = res.headers.get("content-type") || "";
-                if (!contentType.includes("application/json")) {
-                    console.warn("Resposta não-JSON ao carregar tarefas");
-                    return;
-                }
-                const data = await res.json();
-                setLista(data);
-        };
-
+        if (!token) return;
         carregarTarefas();
-    }, [token, API_URL]);
+    }, [token]);
 
     const carregarTarefas = async () => {
-        const res = await fetch(`${API_URL}/tarefas`, {
+        try {
+            const res = await fetch(`${API_URL}/tarefas`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -47,13 +31,20 @@ function Tarefas() {
                 console.error("Erro ao carregar tarefas:", res.status);
                 return;
             }
-            const contentType = res.headers.get("content-type") || "";
-            if (!contentType.includes("application/json")) {
-                console.warn("Resposta não-JSON ao carregar tarefas");
+
+            const type = res.headers.get("content-type") || "";
+
+            if (!type.includes("application/json")) {
+                console.warn("Resposta não-JSON recebida ao carregar tarefas");
                 return;
             }
+
             const data = await res.json();
             setLista(data);
+
+        } catch (err) {
+            console.log("Erro ao buscar tarefas:", err);
+        }
     };
 
     const salvarTarefa = async () => {
@@ -74,42 +65,50 @@ function Tarefas() {
 
         const method = editId ? "PUT" : "POST";
 
-        const response = await fetch(url, {
-            method,
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(body),
-        });
-        const contentType = response.headers.get("content-type") || "";
-        let result = null;
-        if (contentType.includes("application/json")) {
-            result = await response.json();
-        } else {
-            const text = await response.text();
-            console.warn("Resposta não-JSON ao salvar tarefa:", text);
-        }
-
-        if (response.ok) {
-            Swal.fire({
-                icon: "success",
-                title: editId ? "Tarefa editada!" : "Tarefa adicionada!",
-                text: result ? result.message : undefined,
-                timer: 2000,
-                showConfirmButton: false,
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(body),
             });
 
-            carregarTarefas();
-            setTarefa("");
-            setData("");
-            setPrioridade("baixa");
-            setEditId(null);
-        } else {
+            const contentType = response.headers.get("content-type") || "";
+            let result = null;
+
+            if (contentType.includes("application/json")) {
+                result = await response.json();
+            }
+
+            if (response.ok) {
                 Swal.fire({
+                    icon: "success",
+                    title: editId ? "Tarefa editada!" : "Tarefa adicionada!",
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+
+                carregarTarefas();
+                setTarefa("");
+                setData("");
+                setPrioridade("baixa");
+                setEditId(null);
+
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Erro!",
+                    text: result?.message || `Erro ${response.status}`,
+                });
+            }
+
+        } catch (err) {
+            Swal.fire({
                 icon: "error",
-                title: "Erro!",
-                text: result ? result.message : `Erro ${response.status}`,
+                title: "Erro de conexão",
+                text: "Não foi possível acessar o servidor.",
             });
         }
     };
@@ -133,13 +132,7 @@ function Tarefas() {
                     carregarTarefas();
                     Swal.fire("Deletada!", "Sua tarefa foi removida.", "success");
                 } else {
-                    const ct = res.headers.get("content-type") || "";
-                    let msg = `Erro ${res.status}`;
-                    if (ct.includes("application/json")) {
-                        const j = await res.json();
-                        if (j && j.message) msg = j.message;
-                    }
-                    Swal.fire("Erro", msg, "error");
+                    Swal.fire("Erro", `Erro ${res.status}`, "error");
                 }
             }
         });
@@ -152,66 +145,60 @@ function Tarefas() {
         setEditId(item.id);
     };
 
-const concluirTarefa = async (id) => {
-    const res = await fetch(`${API_URL}/tarefas/concluir/${id}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const ct = res.headers.get("content-type") || "";
-    let result = null;
-    if (ct.includes("application/json")) result = await res.json();
-
-    if (res.ok) {
-        carregarTarefas();
-        Swal.fire({
-            icon: "success",
-            title: "Tarefa concluída! ✅",
-            timer: 1800,
-            showConfirmButton: false
+    const concluirTarefa = async (id) => {
+        const res = await fetch(`${API_URL}/tarefas/concluir/${id}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}` },
         });
-    } else {
-        Swal.fire({
-            icon: "error",
-            title: "Erro!",
-            text: result ? result.message : `Erro ${res.status}`
-        });
-    }
-};
 
+        let result = null;
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) result = await res.json();
 
-const logout = () => {
-    Swal.fire({
-        title: "Deseja sair?",
-        text: "Você será desconectado da sua conta!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Sim, sair",
-        cancelButtonText: "Cancelar"
-    }).then((result) => {
-        if (result.isConfirmed) {
-            localStorage.removeItem("token"); // remove o token salvo
+        if (res.ok) {
+            carregarTarefas();
             Swal.fire({
                 icon: "success",
-                title: "Sessão encerrada!",
-                timer: 1500,
+                title: "Tarefa concluída! ✅",
+                timer: 1800,
                 showConfirmButton: false
-            }).then(() => {
-                // Redireciona para login (ajuste o caminho conforme seu app)
-                window.location.href = "/login";
+            });
+        } else {
+            Swal.fire({
+                icon: "error",
+                title: "Erro!",
+                text: result?.message || `Erro ${res.status}`
             });
         }
-    });
-};  
+    };
 
-
-
+    const logout = () => {
+        Swal.fire({
+            title: "Deseja sair?",
+            text: "Você será desconectado da sua conta!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sim, sair",
+            cancelButtonText: "Cancelar"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                localStorage.removeItem("token");
+                Swal.fire({
+                    icon: "success",
+                    title: "Sessão encerrada!",
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = "/"; // redireciona sempre para a home (login)
+                });
+            }
+        });
+    };
 
     const listaFiltrada = lista.filter((item) => {
         if (filtro === "pendentes" && item.concluida === 1) return false;
         if (filtro === "concluidas" && item.concluida === 0) return false;
-        if (filtroPrioridade !== "todas" && item.prioridade !== filtroPrioridade)
-            return false;
+        if (filtroPrioridade !== "todas" && item.prioridade !== filtroPrioridade) return false;
         return true;
     });
 
@@ -219,9 +206,11 @@ const logout = () => {
         <div className="container">
             <h1>Tarefas</h1>
             <p>Bem-vindo à página de Tarefas!</p>
+
             <div className="logout-area">
-    <button className="logout-btn" onClick={logout}>🚪 Logout</button>
-</div>
+                <button className="logout-btn" onClick={logout}>🚪 Logout</button>
+            </div>
+
             <input
                 type="text"
                 placeholder="Digite sua tarefa:"
@@ -252,6 +241,7 @@ const logout = () => {
             </button>
 
             <h3>Filtros:</h3>
+
             <div className="filtros">
                 <select className="filtro" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
                     <option value="pendentes">Pendentes</option>
@@ -271,6 +261,7 @@ const logout = () => {
             </div>
 
             <h3>Tarefas:</h3>
+
             <ul>
                 {listaFiltrada.map((item) => (
                     <li
@@ -278,8 +269,10 @@ const logout = () => {
                         className={item.concluida ? "concluida" : ""}
                     >
                         ✅ {item.tarefa} — {item.data} — {item.prioridade}
+                        
                         <button onClick={() => editarTarefa(item)}>✏️ Editar</button>
                         <button onClick={() => removerTarefa(item.id)}>❌ Excluir</button>
+
                         {!item.concluida && (
                             <button onClick={() => concluirTarefa(item.id)}>✔ Finalizar</button>
                         )}
