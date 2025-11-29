@@ -14,12 +14,15 @@ function Tarefas() {
 
     const token = localStorage.getItem("token");
 
+  const URL_API  =  import.meta.env.VITE_API_URL;   
+
+
     useEffect(() => {
         carregarTarefas();
     }, );
 
     const carregarTarefas = async () => {
-        const res = await fetch("https://projeto-backend-2lg9.onrender.com/tarefas", {
+        const res = await fetch(`${URL_API}/tarefas`, {
             headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -32,8 +35,8 @@ function Tarefas() {
         const body = { tarefa, data, prioridade };
 
         const url = editId
-            ? `https://projeto-backend-2lg9.onrender.com/tarefas/${editId}`
-            : "https://projeto-backend-2lg9.onrender.com/tarefas";
+            ? `${URL_API}/tarefas/${editId}`
+            : `${URL_API}/tarefas`;
 
         const method = editId ? "PUT" : "POST";
 
@@ -81,7 +84,7 @@ function Tarefas() {
             cancelButtonText: "Cancelar"
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await fetch(`https://projeto-backend-2lg9.onrender.com/tarefas/${id}`, {
+                const res = await fetch(`${URL_API}/tarefas/${id}`, {
                     method: "DELETE",
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -102,7 +105,7 @@ function Tarefas() {
     };
 
 const concluirTarefa = async (id) => {
-    const res = await fetch(`https://projeto-backend-2lg9.onrender.com/tarefas/concluir/${id}`, {
+    const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
     });

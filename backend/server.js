@@ -14,9 +14,11 @@ const pool = new Pool({
 });
 
 
+const URL_FRONTEND = process.env.FRONTEND_URL;
+
 const app = express();
 
-app.use(cors({ origin: "https://projeto6-frontend.vercel.app" }));
+app.use(cors({ origin: URL_FRONTEND }));
 app.use(express.json());
 
 const PORT =  process.env.PORT || 3000;

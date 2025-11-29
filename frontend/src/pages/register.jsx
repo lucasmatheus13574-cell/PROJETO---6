@@ -9,10 +9,11 @@ function Register() {
     const [password, setPassword] = useState("");
     const [confirmpassword, setConfirmPassword] = useState("");
     const [mensagem, setMensagem] = useState("");
-
+    
+    const URL_API  =  import.meta.env.VITE_API_URL;   
 
     const registrar = async () => {
-        const response = await fetch("https://projeto-backend-2lg9.onrender.com/register", {
+        const response = await fetch(`${URL_API}/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, confirmpassword })

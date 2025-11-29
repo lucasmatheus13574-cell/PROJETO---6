@@ -10,12 +10,12 @@ function Login() {
     const [mensagem, setMensagem] = useState("");
 
 
-const API_URL  =  import.meta.env.VITE_API_URL;          
+    const URL_API  =  import.meta.env.VITE_API_URL;          
 
 
 
     const logar = async ()  => {
-        const response = await fetch("https://projeto-backend-2lg9.onrender.com/login", {
+        const response = await fetch(`${URL_API}/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password })
