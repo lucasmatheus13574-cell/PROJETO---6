@@ -14,33 +14,21 @@ function Login() {
 
 
 
-const logar = async ()  => {
-    try {
+    const logar = async ()  => {
         const response = await fetch(`${URL_API}/login`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password })
         });
-
+        
         const data = await response.json();
-        console.log("Resposta:", data);
-
-        if (!response.ok) {
-            console.error("Erro HTTP:", response.status);
-        }
-
         setMensagem(data.message);
 
         if (data.token) {
             localStorage.setItem("token", data.token);
-            navigate("/tarefas");
+            navigate("/tarefas"); 
         }
-    } catch (err) {
-        console.error("ERRO NO FETCH:", err);
-    }
-};
+    };
 
     return (
         <div className="auth-container">

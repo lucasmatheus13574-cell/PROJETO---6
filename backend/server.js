@@ -116,6 +116,7 @@ app.get("/tarefas", autenticarToken, (req, res) => {
 });
 
 
+
 app.post("/tarefas", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
 
