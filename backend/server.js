@@ -108,6 +108,11 @@ app.post("/login", (req, res) => {
 });
 
 
+app.get("/login", autenticarToken, (req, res) => {
+  res.json({ message: "Token válido!, Rota funcionando " });
+});
+
+
 app.get("/tarefas", autenticarToken, (req, res) => {
   pool.query("SELECT * FROM tarefas WHERE userId = $1", [req.userId], (err, result) => {
     if (err) return res.status(500).json({ message: "Erro ao buscar tarefas!" });

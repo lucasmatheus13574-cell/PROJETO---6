@@ -25,6 +25,7 @@ function Tarefas() {
     const carregarTarefas = useCallback(async () => {
         try {
             const res = await fetch(`${URL_API}/tarefas`, {
+                method: "GET",
                 headers: { Authorization: `Bearer ${token}` },
             });
 
