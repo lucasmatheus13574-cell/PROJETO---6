@@ -104,6 +104,7 @@ app.post("/login", (req, res) => {
 
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "7d" });
     res.json({ message: "Login OK!", token });
+    
   });
 });
 
