@@ -11,52 +11,22 @@ function Register() {
     const [mensagem, setMensagem] = useState("");
 
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-const registrar = async () => {
-    if (!username.trim() || !password.trim() || !confirmpassword.trim()) {
-        setMensagem("Todos os campos são obrigatórios!");
-        return;
-    }
-
-    if (password.length < 6) {
-        setMensagem("A senha deve ter pelo menos 6 caracteres!");
-        return;
-    }
-
-    if (password !== confirmpassword) {
-        setMensagem("As senhas não coincidem!");
-        return;
-    }
-
-    try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/register`, {
+    const registrar = async () => {
+        const response = await fetch("https://projeto-backend-2lg9.onrender.com/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, confirmpassword })
         });
 
-        const contentType = response.headers.get("content-type") || "";
-        let data = null;
-        if (contentType.includes("application/json")) {
-            data = await response.json();
-        } else {
-            const text = await response.text();
-            console.warn("Resposta não-JSON no register:", text);
-        }
-
-        if (data && data.message) setMensagem(data.message);
+        const data = await response.json();
+        setMensagem(data.message);
 
         if (response.ok) {
             setTimeout(() => {
                 navigate("/login");
             }, 1500);
         }
-    } catch (err) {
-        console.log("Erro no registro:", err);
-        setMensagem("Erro ao conectar com o servidor!");
-    }
-};
+    };
 
     return (
         <div className="auth-container">

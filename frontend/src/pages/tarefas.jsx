@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import "../styles/Tarefas.css";
 import Swal from "sweetalert2";
 
@@ -8,108 +8,65 @@ function Tarefas() {
     const [prioridade, setPrioridade] = useState("baixa");
     const [lista, setLista] = useState([]);
     const [editId, setEditId] = useState(null);
+    const [mensagem] = useState("");
     const [filtro, setFiltro] = useState("pendentes");
     const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
     const token = localStorage.getItem("token");
 
-    // Garante que a URL não tem barra no final
-    const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-
-    const carregarTarefas = useCallback(async () => {
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/tarefas`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (!res.ok) {
-                console.error("Erro ao carregar tarefas:", res.status);
-                return;
-            }
-
-            const type = res.headers.get("content-type") || "";
-
-            if (!type.includes("application/json")) {
-                console.warn("Resposta não-JSON recebida ao carregar tarefas");
-                return;
-            }
-
-            const data = await res.json();
-            setLista(data);
-
-        } catch (err) {
-            console.error("Erro ao buscar tarefas:", err);
-        }
-    }, [token]);
-
     useEffect(() => {
-        if (!token) return;
         carregarTarefas();
-    }, [carregarTarefas, token]);
+    }, );
+
+    const carregarTarefas = async () => {
+        const res = await fetch("https://projeto-backend-2lg9.onrender.com/tarefas", {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        setLista(data);
+    };
 
     const salvarTarefa = async () => {
-        if (!tarefa.trim() || !data) {
-            Swal.fire({
-                icon: "warning",
-                title: "Campos incompletos!",
-                text: "Preencha tarefa e data.",
-            });
-            return;
-        }
-
         const body = { tarefa, data, prioridade };
 
         const url = editId
-            ? `${API_URL}/tarefas/${editId}`
-            : `${API_URL}/tarefas`;
+            ? `https://projeto-backend-2lg9.onrender.com/tarefas/${editId}`
+            : "https://projeto-backend-2lg9.onrender.com/tarefas";
 
         const method = editId ? "PUT" : "POST";
 
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(body),
+        const response = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(body),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            Swal.fire({
+                icon: "success",
+                title: editId ? "Tarefa editada!" : "Tarefa adicionada!",
+                text: result.message,
+                timer: 2000,
+                showConfirmButton: false,
             });
 
-            const contentType = response.headers.get("content-type") || "";
-            let result = null;
-
-            if (contentType.includes("application/json")) {
-                result = await response.json();
-            }
-
-            if (response.ok) {
-                Swal.fire({
-                    icon: "success",
-                    title: editId ? "Tarefa editada!" : "Tarefa adicionada!",
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-
-                carregarTarefas();
-                setTarefa("");
-                setData("");
-                setPrioridade("baixa");
-                setEditId(null);
-
-            } else {
-                Swal.fire({
-                    icon: "error",
-                    title: "Erro!",
-                    text: result?.message || `Erro ${response.status}`,
-                });
-            }
-
-        } catch (err) {
-            console.error("Erro ao salvar tarefa:", err);
+            carregarTarefas();
+            setTarefa("");
+            setData("");
+            setPrioridade("baixa");
+            setEditId(null);
+        } else {
             Swal.fire({
                 icon: "error",
-                title: "Erro de conexão",
-                text: "Não foi possível acessar o servidor.",
+                title: "Erro!",
+                text: result.message,
             });
         }
     };
@@ -124,7 +81,7 @@ function Tarefas() {
             cancelButtonText: "Cancelar"
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await fetch(`${API_URL}/tarefas/${id}`, {
+                const res = await fetch(`https://projeto-backend-2lg9.onrender.com/tarefas/${id}`, {
                     method: "DELETE",
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -132,8 +89,6 @@ function Tarefas() {
                 if (res.ok) {
                     carregarTarefas();
                     Swal.fire("Deletada!", "Sua tarefa foi removida.", "success");
-                } else {
-                    Swal.fire("Erro", `Erro ${res.status}`, "error");
                 }
             }
         });
@@ -146,60 +101,64 @@ function Tarefas() {
         setEditId(item.id);
     };
 
-    const concluirTarefa = async (id) => {
-        const res = await fetch(`${API_URL}/tarefas/concluir/${id}`, {
-            method: "PUT",
-            headers: { Authorization: `Bearer ${token}` },
+const concluirTarefa = async (id) => {
+    const res = await fetch(`https://projeto-backend-2lg9.onrender.com/tarefas/concluir/${id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+
+    const result = await res.json();
+
+    if (res.ok) {
+        carregarTarefas();
+        Swal.fire({
+            icon: "success",
+            title: "Tarefa concluída! ✅",
+            timer: 1800,
+            showConfirmButton: false
         });
+    } else {
+        Swal.fire({
+            icon: "error",
+            title: "Erro!",
+            text: result.message
+        });
+    }
+};
 
-        let result = null;
-        const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) result = await res.json();
 
-        if (res.ok) {
-            carregarTarefas();
+const logout = () => {
+    Swal.fire({
+        title: "Deseja sair?",
+        text: "Você será desconectado da sua conta!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sim, sair",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.removeItem("token");
             Swal.fire({
                 icon: "success",
-                title: "Tarefa concluída! ✅",
-                timer: 1800,
+                title: "Sessão encerrada!",
+                timer: 1500,
                 showConfirmButton: false
-            });
-        } else {
-            Swal.fire({
-                icon: "error",
-                title: "Erro!",
-                text: result?.message || `Erro ${res.status}`
+            }).then(() => {
+                window.location.href = "/login";
             });
         }
-    };
+    });
+};  
 
-    const logout = () => {
-        Swal.fire({
-            title: "Deseja sair?",
-            text: "Você será desconectado da sua conta!",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Sim, sair",
-            cancelButtonText: "Cancelar"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                localStorage.removeItem("token");
-                Swal.fire({
-                    icon: "success",
-                    title: "Sessão encerrada!",
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.location.href = "/"; // redireciona sempre para a home (login)
-                });
-            }
-        });
-    };
+
+
 
     const listaFiltrada = lista.filter((item) => {
         if (filtro === "pendentes" && item.concluida === 1) return false;
         if (filtro === "concluidas" && item.concluida === 0) return false;
-        if (filtroPrioridade !== "todas" && item.prioridade !== filtroPrioridade) return false;
+        if (filtroPrioridade !== "todas" && item.prioridade !== filtroPrioridade)
+            return false;
         return true;
     });
 
@@ -207,11 +166,9 @@ function Tarefas() {
         <div className="container">
             <h1>Tarefas</h1>
             <p>Bem-vindo à página de Tarefas!</p>
-
             <div className="logout-area">
-                <button className="logout-btn" onClick={logout}>🚪 Logout</button>
-            </div>
-
+    <button className="logout-btn" onClick={logout}>🚪 Logout</button>
+</div>
             <input
                 type="text"
                 placeholder="Digite sua tarefa:"
@@ -241,8 +198,9 @@ function Tarefas() {
                 {editId ? "Salvar Edição" : "Adicionar Tarefa"}
             </button>
 
-            <h3>Filtros:</h3>
+            {mensagem && <p>{mensagem}</p>}
 
+            <h3>Filtros:</h3>
             <div className="filtros">
                 <select className="filtro" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
                     <option value="pendentes">Pendentes</option>
@@ -262,7 +220,6 @@ function Tarefas() {
             </div>
 
             <h3>Tarefas:</h3>
-
             <ul>
                 {listaFiltrada.map((item) => (
                     <li
@@ -270,10 +227,8 @@ function Tarefas() {
                         className={item.concluida ? "concluida" : ""}
                     >
                         ✅ {item.tarefa} — {item.data} — {item.prioridade}
-                        
                         <button onClick={() => editarTarefa(item)}>✏️ Editar</button>
                         <button onClick={() => removerTarefa(item.id)}>❌ Excluir</button>
-
                         {!item.concluida && (
                             <button onClick={() => concluirTarefa(item.id)}>✔ Finalizar</button>
                         )}
