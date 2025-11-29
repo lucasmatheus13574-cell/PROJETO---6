@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import "../styles/Tarefas.css";
 import Swal from "sweetalert2";
 
@@ -8,7 +8,7 @@ function Tarefas() {
     const [prioridade, setPrioridade] = useState("baixa");
     const [lista, setLista] = useState([]);
     const [editId, setEditId] = useState(null);
-    const [mensagem] = useState("");
+    const [mensagem, ] = useState("");
     const [filtro, setFiltro] = useState("pendentes");
     const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
@@ -17,19 +17,32 @@ function Tarefas() {
   const URL_API  =  import.meta.env.VITE_API_URL;   
 
 
-    useEffect(() => {
-        carregarTarefas();
-    },);
+        useEffect(() => {
+            carregarTarefas();
+        }, [carregarTarefas]);
 
-    const carregarTarefas = async () => {
-        const res = await fetch(`${URL_API}/tarefas`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
 
-        if (!res.ok) return;
-        const data = await res.json();
-        setLista(data);
-    };
+    const carregarTarefas = useCallback(async () => {
+        try {
+            const res = await fetch(`${URL_API}/tarefas`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.status === 401) {
+                localStorage.removeItem("token");
+                window.location.href = "/login";
+                return;
+            }
+
+            if (!res.ok) return;
+
+            const ct = res.headers.get("content-type") || "";
+            const data = ct.includes("application/json") ? await res.json() : [];
+            setLista(data);
+        } catch (err) {
+            console.error("Erro ao carregar tarefas:", err);
+        }
+    }, [URL_API, token]);
 
     const salvarTarefa = async () => {
         const body = { tarefa, data, prioridade };
@@ -49,7 +62,8 @@ function Tarefas() {
             body: JSON.stringify(body),
         });
 
-        const result = await response.json();
+        const ct = response.headers.get("content-type") || "";
+        const result = ct.includes("application/json") ? await response.json() : { message: response.statusText };
 
         if (response.ok) {
             Swal.fire({
@@ -105,28 +119,33 @@ function Tarefas() {
     };
 
 const concluirTarefa = async (id) => {
-    const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-    });
-
-
-    const result = await res.json();
-
-    if (res.ok) {
-        carregarTarefas();
-        Swal.fire({
-            icon: "success",
-            title: "Tarefa concluída! ✅",
-            timer: 1800,
-            showConfirmButton: false
+    try {
+        const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}` },
         });
-    } else {
-        Swal.fire({
-            icon: "error",
-            title: "Erro!",
-            text: result.message
-        });
+
+        const ct = res.headers.get("content-type") || "";
+        const result = ct.includes("application/json") ? await res.json() : { message: res.statusText };
+
+        if (res.ok) {
+            carregarTarefas();
+            Swal.fire({
+                icon: "success",
+                title: "Tarefa concluída! ✅",
+                timer: 1800,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire({
+                icon: "error",
+                title: "Erro!",
+                text: result.message
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire({ icon: "error", title: "Erro", text: "Erro de conexão." });
     }
 };
 
