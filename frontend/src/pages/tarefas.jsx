@@ -19,7 +19,7 @@ function Tarefas() {
 
     useEffect(() => {
         carregarTarefas();
-    }, );
+    }, []);
 
     const carregarTarefas = async () => {
         const res = await fetch(`${URL_API}/tarefas`, {
