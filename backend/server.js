@@ -16,10 +16,10 @@ const pool = new Pool({
 
 const app = express();
 
-app.use(cors({ origin: "https://projeto6-frontend.vercel.app/" }));
+app.use(cors({ origin: "https://projeto6-frontend.vercel.app" }));
 app.use(express.json());
 
-const PORT =  "https://projeto-backend-2lg9.onrender.com";
+const PORT =  process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
 
 
