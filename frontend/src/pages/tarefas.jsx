@@ -26,7 +26,7 @@ function Tarefas() {
         try {
             const res = await fetch(`${URL_API}/tarefas`, {
                 method: "GET",
-                headers: { Authorization: `Bearer ${token}` },
+                headers: { "Authorization": `Bearer ${token}` },
             });
 
             if (res.status === 401) {
@@ -58,7 +58,7 @@ function Tarefas() {
             method,
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+                "Authorization": `Bearer ${token}`,
             },
             body: JSON.stringify(body),
         });
@@ -101,7 +101,7 @@ function Tarefas() {
             if (result.isConfirmed) {
                 const res = await fetch(`${URL_API}/tarefas/${id}`, {
                     method: "DELETE",
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: { "Authorization": `Bearer ${token}` },
                 });
 
                 if (res.ok) {
@@ -123,7 +123,7 @@ const concluirTarefa = async (id) => {
     try {
         const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
             method: "PUT",
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { "Authorization": `Bearer ${token}` },
         });
 
         const ct = res.headers.get("content-type") || "";
