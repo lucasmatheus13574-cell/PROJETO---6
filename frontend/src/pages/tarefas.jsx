@@ -26,7 +26,9 @@ function Tarefas() {
         try {
             const res = await fetch(`${URL_API}/tarefas`, {
                 method: "GET",
-                headers: { "Authorization": `Bearer ${token}` },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}` },
             });
 
             if (res.status === 401) {
