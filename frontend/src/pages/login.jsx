@@ -17,9 +17,7 @@ function Login() {
     const logar = async ()  => {
         const response = await fetch(`${URL_API}/login`, {
             method: "POST",
-            headers: { "Content-Type": "application/json",
-                "authorization": `Bearer ${localStorage.getItem("token")}`
-            },
+            headers: { "Content-Type": "application/json"},
             body: JSON.stringify({ username, password })
         });
         
