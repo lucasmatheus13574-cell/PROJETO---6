@@ -28,7 +28,7 @@ function Tarefas() {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` },
+                    "authorization": `Bearer ${token}` },
             });
 
             if (res.status === 401) {
@@ -60,7 +60,7 @@ function Tarefas() {
             method,
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
+                "authorization": `Bearer ${token}`,
             },
             body: JSON.stringify(body),
         });
@@ -103,7 +103,7 @@ function Tarefas() {
             if (result.isConfirmed) {
                 const res = await fetch(`${URL_API}/tarefas/${id}`, {
                     method: "DELETE",
-                    headers: { "Authorization": `Bearer ${token}` },
+                    headers: { "authorization": `Bearer ${token}` },
                 });
 
                 if (res.ok) {
@@ -125,7 +125,7 @@ const concluirTarefa = async (id) => {
     try {
         const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
             method: "PUT",
-            headers: { "Authorization": `Bearer ${token}` },
+            headers: { "authorization": `Bearer ${token}` },
         });
 
         const ct = res.headers.get("content-type") || "";
