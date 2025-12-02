@@ -12,23 +12,23 @@ function Tarefas() {
     const [filtro, setFiltro] = useState("pendentes");
     const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
-
+    const token = localStorage.getItem("token");
+    
     const URL_API  =  import.meta.env.VITE_API_URL;   
-
-
-        useEffect(() => {
-            carregarTarefas();
-        }, [carregarTarefas]);
-
-
+    
+    
+    useEffect(() => {
+        carregarTarefas();
+    }, [carregarTarefas]);
+    
+    
     const carregarTarefas = useCallback(async () => {
         try {
             const res = await fetch(`${URL_API}/tarefas`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "authorization": "Bearer " + localStorage.getItem("token")
-                },
+                    "authorization": `Bearer ${token}` },
             });
 
             if (res.status === 401) {
@@ -45,7 +45,7 @@ function Tarefas() {
         } catch (err) {
             console.error("Erro ao carregar tarefas:", err);
         }
-    }, [URL_API]);
+    }, [URL_API, token]);
 
     const salvarTarefa = async () => {
         const body = { tarefa, data, prioridade };
@@ -60,7 +60,7 @@ function Tarefas() {
             method,
             headers: {
                 "Content-Type": "application/json",
-                "authorization": "Bearer " + localStorage.getItem("token")
+                "authorization": `Bearer ${token}`,
             },
             body: JSON.stringify(body),
         });
@@ -103,7 +103,7 @@ function Tarefas() {
             if (result.isConfirmed) {
                 const res = await fetch(`${URL_API}/tarefas/${id}`, {
                     method: "DELETE",
-                    headers: { "authorization": "Bearer " + localStorage.getItem("token") }
+                    headers: { "authorization": `Bearer ${token}` },
                 });
 
                 if (res.ok) {
@@ -125,7 +125,7 @@ const concluirTarefa = async (id) => {
     try {
         const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
             method: "PUT",
-            headers: { "authorization": "Bearer " + localStorage.getItem("token") },
+            headers: { "authorization": `Bearer ${token}` },
         });
 
         const ct = res.headers.get("content-type") || "";
