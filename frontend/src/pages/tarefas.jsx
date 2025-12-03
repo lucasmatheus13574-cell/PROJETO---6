@@ -103,7 +103,9 @@ function Tarefas() {
             if (result.isConfirmed) {
                 const res = await fetch(`${URL_API}/tarefas/${id}`, {
                     method: "DELETE",
-                    headers: { "authorization": `Bearer ${token}` },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "authorization": `Bearer ${token}` },
                 });
 
                 if (res.ok) {
@@ -126,6 +128,7 @@ const concluirTarefa = async (id) => {
         const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
             method: "PUT",
             headers: {
+                "Content-Type": "application/json",
                 "authorization": `Bearer ${token}` },
         });
 
