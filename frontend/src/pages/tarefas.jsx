@@ -125,7 +125,8 @@ const concluirTarefa = async (id) => {
     try {
         const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
             method: "PUT",
-            headers: { "authorization": `Bearer ${token}` },
+            headers: {
+                "authorization": `Bearer ${token}` },
         });
 
         const ct = res.headers.get("content-type") || "";

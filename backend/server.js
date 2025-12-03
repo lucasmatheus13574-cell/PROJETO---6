@@ -65,7 +65,6 @@ function autenticarToken(req, res, next) {
   });
 }
 
-console.log(autenticarToken);
 
 app.post("/register", async (req, res) => {
   const { username, password, confirmpassword } = req.body;
@@ -190,5 +189,3 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
-console.log(autenticarToken);
