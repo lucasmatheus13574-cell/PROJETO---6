@@ -65,7 +65,7 @@ function autenticarToken(req, res, next) {
   });
 }
 
-
+console.log(autenticarToken);
 
 app.post("/register", async (req, res) => {
   const { username, password, confirmpassword } = req.body;
