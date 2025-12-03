@@ -20,7 +20,6 @@ const app = express();
 
 app.use(cors({ 
   origin: URL_FRONTEND,
-  ssl: true,
   credentials: true
 }));
 app.use(express.json());
