@@ -12,7 +12,7 @@ function Tarefas() {
     const [filtro, setFiltro] = useState("pendentes");
     const [filtroPrioridade, setFiltroPrioridade] = useState("todas");
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");    
     
     const URL_API  =  import.meta.env.VITE_API_URL;   
     

@@ -22,6 +22,7 @@ app.use(cors({
   origin: URL_FRONTEND,
   credentials: true
 }));
+
 app.use(express.json());
 
 const PORT =  process.env.PORT || 3000;
@@ -74,7 +75,8 @@ app.post("/register", async (req, res) => {
   if (password !== confirmpassword)
     return res.status(400).json({ message: "Senhas não coincidem!" });
 
-  if (password,confirmpassword.length < 6)
+  if (password.length < 6 || confirmpassword.length < 6
+  )
     return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres!" });
 
   
@@ -96,6 +98,9 @@ app.post("/login", (req, res) => {
 
   pool.query("SELECT * FROM users WHERE username = $1", [username], async (err, result) => {
     const user = result.rows[0];
+
+    if (err) return res.status(500).json({ message: "Erro ao buscar usuário!" });
+    
     if (!user) return res.status(404).json({ message: "Usuário não encontrado!" });
 
     const valid = await bcryptjs.compare(password, user.password);
@@ -127,6 +132,7 @@ app.post("/tarefas", autenticarToken, (req, res) => {
   if (!tarefa || !data || !prioridade)
     return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
 
+  
   pool.query(
     "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES ($1, $2, $3, $4)",
     [req.userId, tarefa, data, prioridade],
@@ -135,7 +141,7 @@ app.post("/tarefas", autenticarToken, (req, res) => {
 
       res.status(201).json({
         message: "Tarefa adicionada!",
-        tarefa: { id: this.lastID, tarefa, data, prioridade, concluida: 0 }
+        tarefa: { id:  tarefa, data, prioridade, concluida: 0 }
       });
     }
   );

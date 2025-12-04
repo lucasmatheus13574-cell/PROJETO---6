@@ -23,6 +23,7 @@ Node.js (versão 22.21.1 ou superior)
 NPM (versão 22.21.1 ou superior)
 
 
+
 6. "Como Configurar e Rodar o Projeto": Por favor, adicione os passos detalhados para:
 - Clonar o repositório.
 -Instalar as dependências do backend (bcryptjs , jsonwebtoken , cors , sqlite3 , express).
