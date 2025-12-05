@@ -17,9 +17,6 @@ function Tarefas() {
     const URL_API  =  import.meta.env.VITE_API_URL;   
     
     
-    useEffect(() => {
-        carregarTarefas();
-    }, [carregarTarefas]);
     
     
     const carregarTarefas = useCallback(async () => {
@@ -29,24 +26,33 @@ function Tarefas() {
                 headers: {
                     "Content-Type": "application/json",
                     "authorization": `Bearer ${token}` },
-            });
-
-            if (res.status === 401) {
-                localStorage.removeItem("token");
-                window.location.href = "/login";
-                return;
+                });
+                
+                if (res.status === 401) {
+                    localStorage.removeItem("token");
+                    window.location.href = "/login";
+                    return;
+                }
+                
+                if (!res.ok) return;
+                
+                const ct = res.headers.get("content-type") || "";
+                const data = ct.includes("application/json") ? await res.json() : [];
+                setLista(data);
+            } catch (err) {
+                console.error("Erro ao carregar tarefas:", err);
             }
+        }, [URL_API, token]);
+        
 
-            if (!res.ok) return;
 
-            const ct = res.headers.get("content-type") || "";
-            const data = ct.includes("application/json") ? await res.json() : [];
-            setLista(data);
-        } catch (err) {
-            console.error("Erro ao carregar tarefas:", err);
-        }
-    }, [URL_API, token]);
+        useEffect(() => {
+            carregarTarefas();
+        }, [carregarTarefas]);
 
+
+
+        
     const salvarTarefa = async () => {
         const body = { tarefa, data, prioridade };
 
