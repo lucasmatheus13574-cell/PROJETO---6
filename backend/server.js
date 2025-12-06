@@ -44,7 +44,7 @@ pool.query(
   `CREATE TABLE IF NOT EXISTS tarefas (
       id SERIAL PRIMARY KEY,
       userId INTEGER,
-      tarefa TEXT,
+      tarefa TEXT UNIQUE NOT NULL,
       data TEXT,
       prioridade TEXT,
       concluida INTEGER DEFAULT 0,
