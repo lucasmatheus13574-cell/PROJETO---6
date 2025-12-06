@@ -75,40 +75,40 @@ app.post("/register", async (req, res) => {
   if (password !== confirmpassword)
     return res.status(400).json({ message: "Senhas não coincidem!" });
 
-  if (password.length < 6 || confirmpassword.length < 6
-  )
+  if (password.length < 6)
     return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres!" });
-
-  
 
   try {
     const hashed = await bcryptjs.hash(password, 10);
-    pool.query("INSERT INTO users (username, password) VALUES ($1, $2)", [username, hashed], (err) => {
-      if (err) return res.status(500).json({ message: "Usuário já existe!" });
-      res.status(201).json({ message: "Usuário registrado com sucesso!" });
-    });
+    const result = await pool.query(
+      "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id",
+      [username, hashed]
+    );
+    res.status(201).json({ message: "Usuário registrado com sucesso!", id: result.rows[0].id });
   } catch (error) {
+    console.error("Register error:", error);
+    if (error && error.code === '23505') return res.status(409).json({ message: "Usuário já existe!" });
     res.status(500).json({ message: "Erro no servidor!" });
   }
 });
 
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
-
-  pool.query("SELECT * FROM users WHERE username = $1", [username], async (err, result) => {
+  try {
+    const result = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
+    if (!result || result.rowCount === 0) return res.status(404).json({ message: "Usuário não encontrado!" });
     const user = result.rows[0];
-
-    if (err) return res.status(500).json({ message: "Erro ao buscar usuário!" });
-    
-    if (!user) return res.status(404).json({ message: "Usuário não encontrado!" });
 
     const valid = await bcryptjs.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: "Senha incorreta!" });
 
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "7d" });
     res.json({ message: "Login OK!", token });
-  });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Erro no servidor!" });
+  }
 });
 
 
@@ -126,25 +126,25 @@ app.get("/tarefas", autenticarToken, (req, res) => {
 
 
 
-app.post("/tarefas", autenticarToken, (req, res) => {
+app.post("/tarefas", autenticarToken, async (req, res) => {
   const { tarefa, data, prioridade } = req.body;
 
   if (!tarefa || !data || !prioridade)
     return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
 
-  
-  pool.query(
-    "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES ($1, $2, $3, $4)",
-    [req.userId, tarefa, data, prioridade],
-    function (err) {
-      if (err) return res.status(500).json({ message: "Erro ao adicionar!" });
-
-      res.status(201).json({
-        message: "Tarefa adicionada!",
-        tarefa: { id:  tarefa, data, prioridade, concluida: 0 }
-      });
-    }
-  );
+  try {
+    const result = await pool.query(
+      "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES ($1, $2, $3, $4) RETURNING id",
+      [req.userId, tarefa, data, prioridade]
+    );
+    res.status(201).json({
+      message: "Tarefa adicionada!",
+      tarefa: { id: result.rows[0].id, tarefa, data, prioridade, concluida: 0 }
+    });
+  } catch (err) {
+    console.error("Add tarefa error:", err);
+    res.status(500).json({ message: "Erro ao adicionar!" });
+  }
 });
 
 
@@ -193,4 +193,9 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+});
+
+// Health check
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'API funcionando' });
 });
