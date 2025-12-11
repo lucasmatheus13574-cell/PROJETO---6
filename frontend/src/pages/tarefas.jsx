@@ -122,6 +122,7 @@ function Tarefas() {
         });
     };
 
+    
     const editarTarefa = (item) => {
         setTarefa(item.tarefa);
         setData(item.data);

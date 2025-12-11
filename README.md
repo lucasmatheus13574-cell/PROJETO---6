@@ -17,6 +17,7 @@ Persistência de dados de usuários e tarefas no SQLite.
 Interface de usuário desenvolvida com React.
 
 
+
 5. Como Configurar e Rodar o Projeto:
 Pré-requisitos:
 Node.js (versão 22.21.1 ou superior)
