@@ -206,10 +206,10 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 });
 
   app.post("/eventos", autenticarToken, async (req, res) => {
-    const {horario , titulo , dataInicio , dataFim , descricao} = req.body
-    try{
-      if (!horario || !titulo || !dataInicio || !dataFim || !descricao)
-      return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
+      const {horario , titulo , dataInicio , dataFim , descricao} = req.body
+      try{
+        if (!horario || !titulo || !dataInicio || !dataFim)
+        return res.status(400).json({ message: "Os campos horario, titulo, dataInicio e dataFim são obrigatórios!" });
     const result = await pool.query(
       "INSERT INTO eventos (userId , horario , titulo , dataInicio , dataFim , descricao) VALUES ($1 , $2 , $3 , $4 , $5 , $6) Returning id",
       [req.userId , horario , titulo , dataInicio , dataFim , descricao]
@@ -224,10 +224,6 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 
 app.get("/eventos", autenticarToken, (req, res) => {
   pool.query("SELECT * FROM eventos WHERE userId = $1", [req.userId], (err, result) => {
-    if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
-    res.json(result.rows);
-  });
-  pool.query("SELECT * FROM eventos WHERE horario = $1 AND titulo = $2 AND dataInicio = $3 AND dataFim = $4 AND descricao = $5", [req.body.horario, req.body.titulo, req.body.dataInicio, req.body.dataFim, req.body.descricao], (err, result) => {
     if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
     res.json(result.rows);
   });

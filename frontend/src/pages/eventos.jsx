@@ -40,7 +40,7 @@ function Eventos() {
 
     useEffect(() => {
         fetchEventos();
-    }, []);
+    }, );
 
 
     const handleSelectSlot = ({ start, end }) => {
