@@ -222,6 +222,60 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
   });
 
 
+app.get("/eventos", autenticarToken, (req, res) => {
+  pool.query("SELECT * FROM eventos WHERE userId = $1", [req.userId], (err, result) => {
+    if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
+    res.json(result.rows);
+  });
+  pool.query("SELECT * FROM eventos WHERE horario = $1 AND titulo = $2 AND dataInicio = $3 AND dataFim = $4 AND descricao = $5", [req.body.horario, req.body.titulo, req.body.dataInicio, req.body.dataFim, req.body.descricao], (err, result) => {
+    if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
+    res.json(result.rows);
+  });
+});
+
+
+
+app.get("/eventos/:id", autenticarToken, (req, res) => {
+  const { id } = req.params;
+
+  pool.query("SELECT * FROM eventos WHERE id = $1 AND userId = $2", [id, req.userId], (err, result) => {
+    if (err) return res.status(500).json({ message: "Erro ao buscar evento!" });
+    if (result.rows.length === 0) return res.status(404).json({ message: "Evento não encontrado!" });
+    res.json(result.rows[0]);
+  });
+});
+
+
+app.put("/eventos/:id", autenticarToken, (req, res) => {
+  const {horario , titulo , dataInicio , dataFim , descricao } = req.body;
+  const { id } = req.params
+
+  
+  try{
+    pool.query("UPDATE eventos SET horario = $1 , titulo = $2 , dataInicio = $3 , dataFim = $4 , descricao = $5 WHERE id = $6 AND userId = $7",
+      [horario , titulo , dataInicio , dataFim , descricao , id , req.userId],
+      function (err) {
+        if (err) return res.status(500).json({message: "Erro ao atualizar evento !"})
+          res.json({message: "Evento atualizado !"})
+      }
+    )
+  } catch (err) {
+    console.error("Update evento error:", err);
+    res.status(500).json({ message: "Erro ao atualizar evento!" });
+  }
+});
+
+app.delete("/eventos/:id", autenticarToken, (req, res) => {
+  const { id } = req.params;
+  pool.query(
+    "DELETE FROM eventos WHERE id=$1 AND userId=$2",
+    [id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ message: "Erro ao excluir evento!" });
+      res.json({ message: "Evento removido!" });
+    }
+  );
+});
 
 
 
