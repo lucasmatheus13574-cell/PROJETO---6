@@ -204,6 +204,7 @@ const logout = () => {
             <p>Bem-vindo à página de Tarefas!</p>
             <div className="logout-area">
     <button className="logout-btn" onClick={logout}>🚪 Logout</button>
+    <button className="Eventos" onClick={() => window.location.href = "/eventos"}>🗓️ Eventos</button>
 </div>
             <input
                 type="text"

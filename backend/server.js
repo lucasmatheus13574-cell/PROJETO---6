@@ -53,6 +53,20 @@ pool.query(
   )`
 );
 
+pool.query(
+  `CREATE TABLE IF NOT EXISTS eventos (
+      id SERIAL PRIMARY KEY,
+      userId INTEGER,
+      horario TEXT,
+      titulo TEXT,
+      dataInicio TEXT,
+      dataFim TEXT,
+      descricao TEXT,
+      FOREIGN KEY(userId) REFERENCES users(id)
+  )`
+);
+
+
 function autenticarToken(req, res, next) {
   const authHeader = req.headers[ "authorization" ];
   if (!authHeader) return res.status(401).json({ message: "Token ausente!" });
@@ -190,6 +204,26 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
     }
   );
 });
+
+  app.post("/eventos", autenticarToken, async (req, res) => {
+    const {horario , titulo , dataInicio , dataFim , descricao} = req.body
+    try{
+      if (!horario || !titulo || !dataInicio || !dataFim || !descricao)
+      return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
+    const result = await pool.query(
+      "INSERT INTO eventos (userId , horario , titulo , dataInicio , dataFim , descricao) VALUES ($1 , $2 , $3 , $4 , $5 , $6) Returning id",
+      [req.userId , horario , titulo , dataInicio , dataFim , descricao]
+    );
+    res.status(201).json({ message: "Evento adicionado!", evento: { id: result.rows[0].id, horario, titulo, dataInicio, dataFim, descricao } });
+    } catch (err) {
+      console.error("Add evento error:", err);
+      res.status(500).json({ message: "Erro ao adicionar evento!" });
+    }
+  });
+
+
+
+
 
 
 app.listen(PORT, () => {
