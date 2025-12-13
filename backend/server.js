@@ -205,21 +205,28 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
   );
 });
 
-  app.post("/eventos", autenticarToken, async (req, res) => {
-      const {horario , titulo , dataInicio , dataFim , descricao} = req.body
-      try{
-        if (!horario || !titulo || !dataInicio || !dataFim)
-        return res.status(400).json({ message: "Os campos horario, titulo, dataInicio e dataFim são obrigatórios!" });
+app.post("/events", autenticarToken, async (req, res) => {
+  const { horario, titulo, dataInicio, dataFim, descricao } = req.body;
+
+  if (!titulo || !dataInicio || !dataFim)
+    return res.status(400).json({ message: "Campos obrigatórios!" });
+
+  try {
     const result = await pool.query(
-      "INSERT INTO eventos (userId , horario , titulo , dataInicio , dataFim , descricao) VALUES ($1 , $2 , $3 , $4 , $5 , $6) Returning id",
-      [req.userId , horario , titulo , dataInicio , dataFim , descricao]
+      `
+      INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao)
+      VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING *
+      `,
+      [req.userId, horario, titulo, dataInicio, dataFim, descricao]
     );
-    res.status(201).json({ message: "Evento adicionado!", evento: { id: result.rows[0].id, horario, titulo, dataInicio, dataFim, descricao } });
-    } catch (err) {
-      console.error("Add evento error:", err);
-      res.status(500).json({ message: "Erro ao adicionar evento!" });
-    }
-  });
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Add event error:", err);
+    res.status(500).json({ message: "Erro ao adicionar evento!" });
+  }
+});
 
 
 app.get("/eventos", autenticarToken, (req, res) => {
@@ -230,48 +237,111 @@ app.get("/eventos", autenticarToken, (req, res) => {
 });
 
 
+app.get("/events", autenticarToken, async (req, res) => {
+  const { start, end } = req.query;
 
-app.get("/eventos/:id", autenticarToken, (req, res) => {
-  const { id } = req.params;
+  try {
+    let query = "SELECT * FROM eventos WHERE userId = $1";
+    const params = [req.userId];
 
-  pool.query("SELECT * FROM eventos WHERE id = $1 AND userId = $2", [id, req.userId], (err, result) => {
-    if (err) return res.status(500).json({ message: "Erro ao buscar evento!" });
-    if (result.rows.length === 0) return res.status(404).json({ message: "Evento não encontrado!" });
-    res.json(result.rows[0]);
-  });
+    if (start && end) {
+      query += " AND dataInicio >= $2 AND dataFim <= $3";
+      params.push(start, end);
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao buscar events:", err);
+    res.status(500).json({ message: "Erro ao buscar eventos!" });
+  }
 });
 
 
-app.put("/eventos/:id", autenticarToken, (req, res) => {
-  const {horario , titulo , dataInicio , dataFim , descricao } = req.body;
-  const { id } = req.params
 
-  
-  try{
-    pool.query("UPDATE eventos SET horario = $1 , titulo = $2 , dataInicio = $3 , dataFim = $4 , descricao = $5 WHERE id = $6 AND userId = $7",
-      [horario , titulo , dataInicio , dataFim , descricao , id , req.userId],
-      function (err) {
-        if (err) return res.status(500).json({message: "Erro ao atualizar evento !"})
-          res.json({message: "Evento atualizado !"})
-      }
-    )
+
+app.get("/events", autenticarToken, async (req, res) => {
+  const { start, end } = req.query;
+
+  try {
+    let query = "SELECT * FROM eventos WHERE userId = $1";
+    const params = [req.userId];
+
+    if (start && end) {
+      query += " AND dataInicio >= $2 AND dataFim <= $3";
+      params.push(start, end);
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (err) {
-    console.error("Update evento error:", err);
+    console.error("Erro ao buscar events:", err);
+    res.status(500).json({ message: "Erro ao buscar eventos!" });
+  }
+});
+
+
+
+
+app.get("/events/:id", autenticarToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM eventos WHERE id = $1 AND userId = $2",
+      [id, req.userId]
+    );
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ message: "Evento não encontrado!" });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Erro ao buscar event:", err);
+    res.status(500).json({ message: "Erro ao buscar evento!" });
+  }
+});
+
+
+
+app.put("/events/:id", autenticarToken, async (req, res) => {
+  const { titulo, dataInicio, dataFim, descricao } = req.body;
+  const { id } = req.params;
+
+  try {
+    await pool.query(
+      `
+      UPDATE eventos
+      SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4
+      WHERE id=$5 AND userId=$6
+      `,
+      [titulo, dataInicio, dataFim, descricao, id, req.userId]
+    );
+
+    res.json({ message: "Evento atualizado!" });
+  } catch (err) {
+    console.error("Update event error:", err);
     res.status(500).json({ message: "Erro ao atualizar evento!" });
   }
 });
 
-app.delete("/eventos/:id", autenticarToken, (req, res) => {
+
+app.delete("/events/:id", autenticarToken, async (req, res) => {
   const { id } = req.params;
-  pool.query(
-    "DELETE FROM eventos WHERE id=$1 AND userId=$2",
-    [id, req.userId],
-    function (err) {
-      if (err) return res.status(500).json({ message: "Erro ao excluir evento!" });
-      res.json({ message: "Evento removido!" });
-    }
-  );
+
+  try {
+    await pool.query(
+      "DELETE FROM eventos WHERE id=$1 AND userId=$2",
+      [id, req.userId]
+    );
+
+    res.status(204).send();
+  } catch (err) {
+    console.error("Delete event error:", err);
+    res.status(500).json({ message: "Erro ao excluir evento!" });
+  }
 });
+
 
 
 

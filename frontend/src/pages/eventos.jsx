@@ -1,151 +1,162 @@
 import React, { useState, useEffect } from "react";
-import "../styles/Eventos.css";
 import moment from "moment";
+import "moment/locale/pt-br";
+import "../styles/Eventos.css";
+
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 
+moment.locale("pt-br");
+
+const localizer = momentLocalizer(moment);
+const DragCalendar = withDragAndDrop(Calendar);
+
 function Eventos() {
     const token = localStorage.getItem("token");
-    const URL_API = import.meta.env.VITE_API_URL;
-
-    const DragAndDropCalendar = withDragAndDrop(Calendar);
-    const localizer = momentLocalizer(moment);
-
+    const API = import.meta.env.VITE_API_URL;
 
     const [eventos, setEventos] = useState([]);
+    const [modal, setModal] = useState(false);
+    const [eventoAtual, setEventoAtual] = useState(null);
 
-    const [modalOpen, setModalOpen] = useState(false);
+    const [form, setForm] = useState({
+        titulo: "",
+        dataInicio: "",
+        dataFim: "",
+        descricao: "",
+    });
 
-    const [horario, setHorario] = useState("");
-    const [titulo, setTitulo] = useState("");
-    const [dataInicio, setDataInicio] = useState("");
-    const [dataFim, setDataFim] = useState("");
-    const [descricao, setDescricao] = useState("");
-
-
+    /* ===== BUSCAR ===== */
     const fetchEventos = async () => {
-        try {
-            const response = await fetch(`${URL_API}/eventos`, {
-                method: "GET",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-            const data = await response.json();
-            setEventos(data);
-        } catch (error) {
-            console.error("Erro ao buscar eventos:", error);
-        }
+        const res = await fetch(`${API}/events`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setEventos(data);
     };
 
     useEffect(() => {
         fetchEventos();
-    }, );
+    }, []);
 
-
+    /* ===== CRIAR ===== */
     const handleSelectSlot = ({ start, end }) => {
-        setDataInicio(moment(start).format("YYYY-MM-DDTHH:mm"));
-        setDataFim(moment(end).format("YYYY-MM-DDTHH:mm"));
-        setHorario(moment(start).format("HH:mm"));
-
-        setTitulo("");
-        setDescricao("");
-
-        setModalOpen(true);
+        setEventoAtual(null);
+        setForm({
+            titulo: "",
+            dataInicio: moment(start).format("YYYY-MM-DDTHH:mm"),
+            dataFim: moment(end).format("YYYY-MM-DDTHH:mm"),
+            descricao: "",
+        });
+        setModal(true);
     };
 
-    
-    const CriarEvento = async () => {
-        if (!titulo || !dataInicio || !dataFim) {
-            alert("Preencha os campos obrigatórios");
-            return;
-        }
+    /* ===== EDITAR ===== */
+    const handleSelectEvent = (event) => {
+        setEventoAtual(event);
+        setForm({
+            titulo: event.titulo,
+            dataInicio: moment(event.dataInicio).format("YYYY-MM-DDTHH:mm"),
+            dataFim: moment(event.dataFim).format("YYYY-MM-DDTHH:mm"),
+            descricao: event.descricao,
+        });
+        setModal(true);
+    };
 
-        const body = {
-            horario,
-            titulo,
-            dataInicio,
-            dataFim,
-            descricao,
-        };
+    /* ===== SALVAR ===== */
+    const salvar = async () => {
+        const method = eventoAtual ? "PUT" : "POST";
+        const url = eventoAtual
+            ? `${API}/events/${eventoAtual.id}`
+            : `${API}/events`;
 
-        const response = await fetch(`${URL_API}/eventos`, {
-            method: "POST",
+        await fetch(url, {
+            method,
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify(form),
         });
 
-        if (response.ok) {
-            setModalOpen(false);
-            fetchEventos();
-        }
+        setModal(false);
+        fetchEventos();
+    };
+
+    /* ===== EXCLUIR ===== */
+    const excluir = async () => {
+        await fetch(`${API}/events/${eventoAtual.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        setModal(false);
+        fetchEventos();
     };
 
     return (
-        <div>
-            <h1>Eventos</h1>
-
-            <DragAndDropCalendar
+        <>
+            <DragCalendar
                 selectable
-                defaultDate={moment().toDate()}
-                defaultView="month"
-                localizer={localizer}
-                events={eventos.map((evento) => ({
-                    id: evento.id,
-                    title: evento.titulo,
-                    start: new Date(evento.dataInicio),
-                    end: new Date(evento.dataFim),
-                }))}
-                onSelectSlot={handleSelectSlot}
                 resizable
-                className="calendar"
-                style={{ height: 600 }}
+                longPressThreshold={1}
+                localizer={localizer}
+                events={eventos.map(e => ({
+                    ...e,
+                    start: moment(e.dataInicio).toDate(),
+                    end: moment(e.dataFim).toDate(),
+                    title: e.titulo,
+                }))}
+                defaultView="month"
+                onSelectSlot={handleSelectSlot}
+                onSelectEvent={handleSelectEvent}
+                style={{ height: 650 }}
+                messages={{
+                    today: "Hoje",
+                    month: "Mês",
+                    week: "Semana",
+                    day: "Dia",
+                    next: "Próximo",
+                    previous: "Anterior",
+                }}
             />
 
-
-            {modalOpen && (
+            {modal && (
                 <div className="modal">
                     <div className="modal-content">
-                        <h3>Novo evento</h3>
+                        <h3>{eventoAtual ? "Editar evento" : "Novo evento"}</h3>
 
                         <input
-                            type="text"
                             placeholder="Título"
-                            value={titulo}
-                            onChange={(e) => setTitulo(e.target.value)}
+                            value={form.titulo}
+                            onChange={e => setForm({ ...form, titulo: e.target.value })}
                         />
 
-                        <label>Início</label>
                         <input
                             type="datetime-local"
-                            value={dataInicio}
-                            onChange={(e) => setDataInicio(e.target.value)}
+                            value={form.dataInicio}
+                            onChange={e => setForm({ ...form, dataInicio: e.target.value })}
                         />
 
-                        <label>Fim</label>
                         <input
                             type="datetime-local"
-                            value={dataFim}
-                            onChange={(e) => setDataFim(e.target.value)}
+                            value={form.dataFim}
+                            onChange={e => setForm({ ...form, dataFim: e.target.value })}
                         />
 
                         <textarea
                             placeholder="Descrição"
-                            value={descricao}
-                            onChange={(e) => setDescricao(e.target.value)}
+                            value={form.descricao}
+                            onChange={e => setForm({ ...form, descricao: e.target.value })}
                         />
 
                         <div className="modal-actions">
-                            <button onClick={CriarEvento}>Salvar</button>
-                            <button onClick={() => setModalOpen(false)}>Cancelar</button>
+                            {eventoAtual && <button onClick={excluir}>Excluir</button>}
+                            <button onClick={salvar}>Salvar</button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }
 
