@@ -26,6 +26,7 @@ function Eventos() {
     const fetchEventos = async () => {
         try {
             const response = await fetch(`${URL_API}/eventos`, {
+                method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
