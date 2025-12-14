@@ -1,51 +1,95 @@
-import { Modal, Button, Form } from 'react-bootstrap';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Modal, Button, Form, Spinner } from 'react-bootstrap';
+import Swal from 'sweetalert2';
+
+const formatForInput = (date) => {
+    const d = new Date(date);
+    // convert to local for datetime-local input
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+};
 
 function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
-  const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
-  const [tipo, setTipo] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+    const [title, setTitle] = useState('');
+    const [desc, setDesc] = useState('');
+    const [start, setStart] = useState('');
+    const [end, setEnd] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [tipo, setTipo] = useState('');
 
-  useEffect(() => {
-    if (defaultStart) setStart(defaultStart.toISOString().slice(0, 16));
-    if (defaultEnd) setEnd(defaultEnd.toISOString().slice(0, 16));
-  }, [defaultStart, defaultEnd]);
+    useEffect(() => {
+        if (defaultStart) setStart(formatForInput(defaultStart));
+        if (defaultEnd) setEnd(formatForInput(defaultEnd));
+        setTitle('');
+        setDesc('');
+        setTipo('');
+    }, [defaultStart, defaultEnd, show]);
 
-  const handleSave = () => {
-    onCreate({
-      title,
-      desc,
-      tipo,
-      start: new Date(start).toISOString(),
-      end: new Date(end).toISOString(),
-    });
-  };
+    const handleSave = async () => {
+        if (!title || !start || !end) return Swal.fire({ icon: 'warning', text: 'Preencha título, início e fim' });
+        const s = new Date(start);
+        const e = new Date(end);
+        if (e < s) return Swal.fire({ icon: 'warning', text: 'A data de fim deve ser igual ou posterior à data de início' });
 
-  return (
-    <Modal show={show} onHide={onClose}>
-      <Modal.Header closeButton>
-        <Modal.Title>Novo Evento</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <Form>
-          <Form.Control placeholder="Título" onChange={e => setTitle(e.target.value)} />
-          <Form.Control as="textarea" placeholder="Descrição" onChange={e => setDesc(e.target.value)} />
-          <Form.Select onChange={e => setTipo(e.target.value)}>
-            <option value="">Selecione o tipo</option>
-            <option value="Trabalho">Trabalho</option>
-            <option value="Pessoal">Pessoal</option>
-          </Form.Select>
-          <Form.Control type="datetime-local" value={start} onChange={e => setStart(e.target.value)} />
-          <Form.Control type="datetime-local" value={end} onChange={e => setEnd(e.target.value)} />
-        </Form>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button onClick={handleSave}>Salvar</Button>
-      </Modal.Footer>
-    </Modal>
-  );
+        try {
+            setSubmitting(true);
+            await onCreate({ title, desc, tipo, start: s.toISOString(), end: e.toISOString() });
+            Swal.fire({ icon: 'success', text: 'Evento criado com sucesso!', timer: 1500, showConfirmButton: false });
+            onClose();
+        } catch (err) {
+            console.error('Erro no modal ao criar:', err);
+            Swal.fire({ icon: 'error', text: err?.message || 'Erro ao criar evento' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Modal show={show} onHide={onClose}>
+            <Modal.Header closeButton>
+                <Modal.Title>Novo Evento</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <Form>
+                    <Form.Group className='mb-2'>
+                        <Form.Label>Título</Form.Label>
+                        <Form.Control value={title} onChange={(e) => setTitle(e.target.value)} />
+                    </Form.Group>
+
+                    <Form.Group className='mb-2'>
+                        <Form.Label>Descrição</Form.Label>
+                        <Form.Select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                            <option value="">Selecione</option>
+                            <option value="Trabalho">Trabalho</option>
+                            <option value="Pessoal">Pessoal</option>
+                        </Form.Select>
+
+                    </Form.Group>
+
+                    <Form.Group className='mb-2'>
+                        <Form.Label>Tipo</Form.Label>
+                        <Form.Control type='text' value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder='Ex: Trabalho, Pessoal' />
+                    </Form.Group>
+
+                    <Form.Group className='mb-2'>
+                        <Form.Label>Início</Form.Label>
+                        <Form.Control type='datetime-local' value={start} onChange={(e) => setStart(e.target.value)} />
+                    </Form.Group>
+
+                    <Form.Group className='mb-2'>
+                        <Form.Label>Fim</Form.Label>
+                        <Form.Control type='datetime-local' value={end} onChange={(e) => setEnd(e.target.value)} />
+                    </Form.Group>
+                </Form>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant='secondary' onClick={onClose} disabled={submitting}>Cancelar</Button>
+                <Button variant='primary' onClick={handleSave} disabled={submitting}>
+                    {submitting ? (<><Spinner animation="border" size="sm" /> Enviando...</>) : 'Salvar'}
+                </Button>
+            </Modal.Footer>
+        </Modal>
+    );
 }
 
 export default AddEventModal;
