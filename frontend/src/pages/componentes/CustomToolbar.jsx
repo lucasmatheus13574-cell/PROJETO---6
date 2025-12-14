@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 
-const CustomTollbar = ({label, onView, onNavigate, views}) =>{
+const CustomToolbar = ({label, onView, onNavigate, views}) =>{
     const [itemText, setItemText] = useState('month');
+    const viewsArray = Array.isArray(views) ? views : Object.keys(views || {});
     return(
         <div className="toolbar-container">
             <h1 className='mesAno'>{label}</h1>
@@ -12,7 +13,7 @@ const CustomTollbar = ({label, onView, onNavigate, views}) =>{
                         {itemText}
                     </button>
                     <ul className='dropdown-menu' aria-labelledby='dropdownMenuButton'>
-                        {views.map((view,index) =>(
+                        {viewsArray.map((view,index) =>(
                             <div key={index}>
                                 <li>
                                     <button className='dropdown-item' onClick={() => { onView(view); setItemText(view); }}>{view}</button>
@@ -34,4 +35,4 @@ const CustomTollbar = ({label, onView, onNavigate, views}) =>{
     )
 }
 
-export default CustomTollbar;
+export default CustomToolbar;

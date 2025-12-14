@@ -12,6 +12,7 @@ import Adicionar from './componentes/Adicionar';
 import CustomToolbar from './componentes/CustomToolbar';
 import FiltroAtividades from './componentes/FiltroAtividas';
 import AddEventModal from './componentes/AddEventModal';
+import Swal from 'sweetalert2';
 
 const DragAndDropCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -20,6 +21,7 @@ function Calendario() {
     const [eventos, setEventos] = useState([]);
     const [eventosFiltrados, setEventosFiltrados] = useState([]);
     const [eventoSelecionado, setEventoSelecionado] = useState(null);
+    const [editingEvent, setEditingEvent] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState(null);
 
@@ -36,9 +38,7 @@ function Calendario() {
         },
     });
 
-    /* =========================
-       MOVER / REDIMENSIONAR EVENTO
-    ========================== */
+
     const moverEventos = ({ event, start, end }) => {
         const updatedEvents = eventos.map((e) =>
             e.id === event.id
@@ -50,9 +50,7 @@ function Calendario() {
         setEventosFiltrados(updatedEvents);
     };
 
-    /* =========================
-       BUSCAR EVENTOS DA API
-    ========================== */
+
     useEffect(() => {
         const fetchEvents = async () => {
             try {
@@ -93,23 +91,109 @@ function Calendario() {
         fetchEvents();
     }, [URL_API, token]);
 
-    /* =========================
-       HANDLERS
-    ========================== */
+
     const handleEventClick = (evento) => {
         setEventoSelecionado(evento);
+        // also set lateral form to edit this event
+        setEditingEvent({ ...evento, start: evento.start, end: evento.end });
     };
 
     const handleEventClose = () => {
         setEventoSelecionado(null);
     };
 
-    const handleAdicionar = (novoEvento) => {
-        setEventos((prev) => {
-            const updated = [...prev, { ...novoEvento, id: prev.length + 1 }];
-            setEventosFiltrados(updated);
-            return updated;
-        });
+    const handleCancelEdit = () => {
+        setEditingEvent(null);
+    };
+
+    const handleUpdateEvent = async ({ id, title, desc, start, end }) => {
+        if (!token) return Swal.fire({ icon: 'warning', text: 'Você precisa estar logado' });
+        try {
+            const res = await fetch(`${URL_API}/events/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                body: JSON.stringify({ titulo: title, descricao: desc, dataInicio: start, dataFim: end }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: res.statusText }));
+                throw new Error(err.message || 'Erro ao atualizar evento');
+            }
+            setEventos((prev) => prev.map((ev) => (ev.id === id ? { ...ev, title, desc, start: new Date(start), end: new Date(end) } : ev)));
+            setEventosFiltrados((prev) => prev.map((ev) => (ev.id === id ? { ...ev, title, desc, start: new Date(start), end: new Date(end) } : ev)));
+            setEditingEvent(null);
+        } catch (err) {
+            console.error('Erro ao atualizar evento:', err);
+            throw err;
+        }
+    };
+
+    const handleDeleteEvent = async (id) => {
+        if (!token) return Swal.fire({ icon: 'warning', text: 'Você precisa estar logado' });
+        try {
+            const res = await fetch(`${URL_API}/events/${id}`, {
+                method: 'DELETE',
+                headers: { authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: res.statusText }));
+                throw new Error(err.message || 'Erro ao deletar evento');
+            }
+            setEventos((prev) => prev.filter((ev) => ev.id !== id));
+            setEventosFiltrados((prev) => prev.filter((ev) => ev.id !== id));
+            setEditingEvent(null);
+        } catch (err) {
+            console.error('Erro ao deletar evento:', err);
+            throw err;
+        }
+    };
+
+    const handleAdicionar = async (novoEvento) => {
+        // novoEvento: { title, desc, start (ISO), end (ISO) }
+        if (!token) return alert('Você precisa estar logado para criar eventos');
+        try {
+            const horario = new Date(novoEvento.start).toTimeString().slice(0,5);
+            const body = {
+                horario,
+                titulo: novoEvento.title,
+                dataInicio: novoEvento.start,
+                dataFim: novoEvento.end,
+                descricao: novoEvento.desc || '',
+            };
+
+            const res = await fetch(`${URL_API}/events`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: res.statusText }));
+                throw new Error(err.message || 'Erro ao criar evento');
+            }
+
+            const created = await res.json();
+            const newEvent = {
+                id: created.id || created.evento?.id || Math.random(),
+                title: created.titulo || novoEvento.title,
+                start: new Date(created.dataInicio || novoEvento.start),
+                end: new Date(created.dataFim || novoEvento.end),
+                desc: created.descricao || novoEvento.desc || '',
+            };
+
+            setEventos((prev) => {
+                const updated = [...prev, newEvent];
+                setEventosFiltrados(updated);
+                return updated;
+            });
+
+            alert('Evento criado com sucesso!');
+        } catch (err) {
+            console.error('Erro ao persistir evento:', err);
+            throw err;
+        }
     };
 
     const handleEventDelete = (eventId) => {
@@ -197,16 +281,14 @@ function Calendario() {
         }
     };
 
-    /* =========================
-       RENDER
-    ========================== */
+
     return (
         <div className="tela">
             <div
                 className="toolbar p-4"
                 style={{ maxHeight: '100vh', overflowY: 'auto' }}
             >
-                <Adicionar onAdicionar={handleAdicionar} />
+                <Adicionar onAdicionar={handleAdicionar} editingEvent={editingEvent} onUpdate={handleUpdateEvent} onDelete={handleDeleteEvent} onCancelEdit={handleCancelEdit} />
 
                 <FiltroAtividades
                     atividades={eventos}

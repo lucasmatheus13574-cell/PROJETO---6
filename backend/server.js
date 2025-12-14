@@ -19,7 +19,7 @@ const URL_FRONTEND = process.env.FRONTEND_URL;
 
 const app = express();
 
-// if FRONTEND_URL is provided, restrict to it; otherwise allow all origins (useful for local dev)
+
 const corsOptions = URL_FRONTEND ? { origin: URL_FRONTEND, credentials: true } : { origin: true, credentials: true };
 app.use(cors(corsOptions));
 

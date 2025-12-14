@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button, Form, Spinner } from 'react-bootstrap';
+import Swal from 'sweetalert2';
 
 const formatForInput = (date) => {
     const d = new Date(date);
@@ -13,6 +14,7 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
     const [desc, setDesc] = useState('');
     const [start, setStart] = useState('');
     const [end, setEnd] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         if (defaultStart) setStart(formatForInput(defaultStart));
@@ -21,13 +23,23 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
         setDesc('');
     }, [defaultStart, defaultEnd, show]);
 
-    const handleSave = () => {
-        if (!title || !start || !end) return alert('Preencha título, início e fim');
+    const handleSave = async () => {
+        if (!title || !start || !end) return Swal.fire({ icon: 'warning', text: 'Preencha título, início e fim' });
         const s = new Date(start);
         const e = new Date(end);
-        if (e < s) return alert('A data de fim deve ser igual ou posterior à data de início');
+        if (e < s) return Swal.fire({ icon: 'warning', text: 'A data de fim deve ser igual ou posterior à data de início' });
 
-        onCreate({ title, desc, start: s.toISOString(), end: e.toISOString() });
+        try {
+            setSubmitting(true);
+            await onCreate({ title, desc, start: s.toISOString(), end: e.toISOString() });
+            Swal.fire({ icon: 'success', text: 'Evento criado com sucesso!', timer: 1500, showConfirmButton: false });
+            onClose();
+        } catch (err) {
+            console.error('Erro no modal ao criar:', err);
+            Swal.fire({ icon: 'error', text: err?.message || 'Erro ao criar evento' });
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -59,8 +71,10 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
                 </Form>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant='secondary' onClick={onClose}>Cancelar</Button>
-                <Button variant='primary' onClick={handleSave}>Salvar</Button>
+                <Button variant='secondary' onClick={onClose} disabled={submitting}>Cancelar</Button>
+                <Button variant='primary' onClick={handleSave} disabled={submitting}>
+                    {submitting ? (<><Spinner animation="border" size="sm" /> Enviando...</>) : 'Salvar'}
+                </Button>
             </Modal.Footer>
         </Modal>
     );
