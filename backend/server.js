@@ -131,6 +131,8 @@ app.get("/login", autenticarToken, (req, res) => {
 });
 
 
+
+
 app.get("/tarefas", autenticarToken, (req, res) => {
   pool.query("SELECT * FROM tarefas WHERE userId = $1", [req.userId], (err, result) => {
     if (err) return res.status(500).json({ message: "Erro ao buscar tarefas!" });
@@ -166,29 +168,29 @@ app.put("/tarefas/:id", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
   const { id } = req.params;
 
-
-app.get("/events", autenticarToken, async (req, res) => {
-  const { start, end } = req.query;
-
-  try {
-    let query = "SELECT * FROM eventos WHERE userId = $1";
-    const params = [req.userId];
-
-    if (start && end) {
-      query += " AND dataInicio >= $2 AND dataFim <= $3";
-      params.push(start, end);
-    }
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Erro ao buscar events:", err);
-    res.status(500).json({ message: "Erro ao buscar eventos!" });
-  }
-});
+  pool.query(
+    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3 WHERE id=$4 AND userId=$5",
+    [tarefa, data, prioridade, id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
+      res.json({ message: "Tarefa atualizada!" });
     }
   );
-;
+});
+
+
+app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
+  const { id } = req.params;
+
+  pool.query(
+    "UPDATE tarefas SET concluida=1 WHERE id=$1 AND userId=$2",
+    [id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ message: "Erro ao concluir tarefa!" });
+      res.json({ message: "Tarefa concluída!" });
+    }
+  );
+});
 
 
 app.delete("/tarefas/:id", autenticarToken, (req, res) => {
