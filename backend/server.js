@@ -19,10 +19,9 @@ const URL_FRONTEND = process.env.FRONTEND_URL;
 
 const app = express();
 
-app.use(cors({ 
-  origin: URL_FRONTEND,
-  credentials: true
-}));
+// if FRONTEND_URL is provided, restrict to it; otherwise allow all origins (useful for local dev)
+const corsOptions = URL_FRONTEND ? { origin: URL_FRONTEND, credentials: true } : { origin: true, credentials: true };
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
@@ -167,29 +166,29 @@ app.put("/tarefas/:id", autenticarToken, (req, res) => {
   const { tarefa, data, prioridade } = req.body;
   const { id } = req.params;
 
-  pool.query(
-    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3 WHERE id=$4 AND userId=$5",
-    [tarefa, data, prioridade, id, req.userId],
-    function (err) {
-      if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
-      res.json({ message: "Tarefa atualizada!" });
+
+app.get("/events", autenticarToken, async (req, res) => {
+  const { start, end } = req.query;
+
+  try {
+    let query = "SELECT * FROM eventos WHERE userId = $1";
+    const params = [req.userId];
+
+    if (start && end) {
+      query += " AND dataInicio >= $2 AND dataFim <= $3";
+      params.push(start, end);
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao buscar events:", err);
+    res.status(500).json({ message: "Erro ao buscar eventos!" });
+  }
+});
     }
   );
-});
-
-
-app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
-  const { id } = req.params;
-
-  pool.query(
-    "UPDATE tarefas SET concluida=1 WHERE id=$1 AND userId=$2",
-    [id, req.userId],
-    function (err) {
-      if (err) return res.status(500).json({ message: "Erro ao concluir tarefa!" });
-      res.json({ message: "Tarefa concluída!" });
-    }
-  );
-});
+;
 
 
 app.delete("/tarefas/:id", autenticarToken, (req, res) => {
@@ -350,7 +349,7 @@ app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
 
-// Health check
+
 app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'API funcionando' });
 });

@@ -1,163 +1,196 @@
-import React, { useState, useEffect } from "react";
-import moment from "moment";
-import "moment/locale/pt-br";
-import "../styles/Eventos.css";
+    import React, { useState, useEffect } from 'react';
+    import moment from 'moment';
+    import { Calendar, momentLocalizer } from 'react-big-calendar';
+    import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+    import 'react-big-calendar/lib/css/react-big-calendar.css';
+    import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+    import '../styles/Components-Calendario-css.css';
+    
+    
+    import EventModal from './componentes/EventModal';
+    import Adicionar from './componentes/Adicionar';
+    import CustomTollbar from './componentes/CustomToolbar';
+    import FiltroAtividades from './componentes/FiltroAtividas';
+    import AddEventModal from './componentes/AddEventModal';
+    
+    const DragAndDropCalendar = withDragAndDrop(Calendar);
+    const localizer = momentLocalizer(moment);
 
-import { Calendar, momentLocalizer } from "react-big-calendar";
-import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
+    function Calendario() {
+        const [eventos, setEventos] = useState([]);
+        const [eventoSelecionado, SeteventoSelecionado] = useState(null);
+        const [eventosFiltrados, setEventosFiltrados] = useState([]);
+        const [showAddModal, setShowAddModal] = useState(false);
+        const [selectedSlot, setSelectedSlot] = useState(null);
 
-moment.locale("pt-br");
+        const token = localStorage.getItem("token");
+        const URL_API = import.meta.env.VITE_API_URL;
 
-const localizer = momentLocalizer(moment);
-const DragCalendar = withDragAndDrop(Calendar);
-
-function Eventos() {
-    const token = localStorage.getItem("token");
-    const API = import.meta.env.VITE_API_URL;
-
-    const [eventos, setEventos] = useState([]);
-    const [modal, setModal] = useState(false);
-    const [eventoAtual, setEventoAtual] = useState(null);
-
-    const [form, setForm] = useState({
-        titulo: "",
-        dataInicio: "",
-        dataFim: "",
-        descricao: "",
-    });
-
-    /* ===== BUSCAR ===== */
-    const fetchEventos = async () => {
-        const res = await fetch(`${API}/events`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setEventos(data);
-    };
-
-    useEffect(() => {
-        fetchEventos();
-    }, []);
-
-    /* ===== CRIAR ===== */
-    const handleSelectSlot = ({ start, end }) => {
-        setEventoAtual(null);
-        setForm({
-            titulo: "",
-            dataInicio: moment(start).format("YYYY-MM-DDTHH:mm"),
-            dataFim: moment(end).format("YYYY-MM-DDTHH:mm"),
-            descricao: "",
-        });
-        setModal(true);
-    };
-
-    /* ===== EDITAR ===== */
-    const handleSelectEvent = (event) => {
-        setEventoAtual(event);
-        setForm({
-            titulo: event.titulo,
-            dataInicio: moment(event.dataInicio).format("YYYY-MM-DDTHH:mm"),
-            dataFim: moment(event.dataFim).format("YYYY-MM-DDTHH:mm"),
-            descricao: event.descricao,
-        });
-        setModal(true);
-    };
-
-    /* ===== SALVAR ===== */
-    const salvar = async () => {
-        const method = eventoAtual ? "PUT" : "POST";
-        const url = eventoAtual
-            ? `${API}/events/${eventoAtual.id}`
-            : `${API}/events`;
-
-        await fetch(url, {
-            method,
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+        const eventStyle = (event) => ({
+            style: {
+                backgroundColor: event.color,
             },
-            body: JSON.stringify(form),
         });
 
-        setModal(false);
-        fetchEventos();
-    };
+        const moverEventos = (data) => {
+            const { start, end } = data;
+            const updatedEvents = eventos.map((event) => {
+                if (event.id === data.event.id) {
+                    return {
+                        ...event,
+                        start: new Date(start),
+                        end: new Date(end),
+                    };
+                }
+                return event;
+            });
+            setEventos(updatedEvents);
+        };
 
-    /* ===== EXCLUIR ===== */
-    const excluir = async () => {
-        await fetch(`${API}/events/${eventoAtual.id}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        setModal(false);
-        fetchEventos();
-    };
+        useEffect(() => {
+    
+            const fetchEvents = async () => {
+                try {
+                    const res = await fetch(`${URL_API}/events`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${token}` },
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const mapped = data.map((e) => ({
+                        id: e.id,
+                        title: e.titulo || 'Sem título',
+                        start: new Date(e.dataInicio),
+                        end: new Date(e.dataFim),
+                        desc: e.descricao || '',
+                    }));
+                    setEventos(mapped);
+                    setEventosFiltrados(mapped);
+                } catch (err) {
+                    console.error('Erro ao buscar events:', err);
+                }
+            };
 
-    return (
-        <>
-            <DragCalendar
-                selectable
-                resizable
-                longPressThreshold={1}
-                localizer={localizer}
-                events={eventos.map(e => ({
-                    ...e,
-                    start: moment(e.dataInicio).toDate(),
-                    end: moment(e.dataFim).toDate(),
-                    title: e.titulo,
-                }))}
-                defaultView="month"
-                onSelectSlot={handleSelectSlot}
-                onSelectEvent={handleSelectEvent}
-                style={{ height: 650 }}
-                messages={{
-                    today: "Hoje",
-                    month: "Mês",
-                    week: "Semana",
-                    day: "Dia",
-                    next: "Próximo",
-                    previous: "Anterior",
-                }}
-            />
+            fetchEvents();
+        }, []);
 
-            {modal && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <h3>{eventoAtual ? "Editar evento" : "Novo evento"}</h3>
+        const handleEventClick = (evento) => {
+            SeteventoSelecionado(evento);
+        };
 
-                        <input
-                            placeholder="Título"
-                            value={form.titulo}
-                            onChange={e => setForm({ ...form, titulo: e.target.value })}
-                        />
+        const handleEventClose = () => {
+            SeteventoSelecionado(null);
+        };
 
-                        <input
-                            type="datetime-local"
-                            value={form.dataInicio}
-                            onChange={e => setForm({ ...form, dataInicio: e.target.value })}
-                        />
+        const handleAdicionar = (novoEvento) => {
 
-                        <input
-                            type="datetime-local"
-                            value={form.dataFim}
-                            onChange={e => setForm({ ...form, dataFim: e.target.value })}
-                        />
+            setEventos([...eventos,{...novoEvento,id:eventos.length + 1}]);
+        };
 
-                        <textarea
-                            placeholder="Descrição"
-                            value={form.descricao}
-                            onChange={e => setForm({ ...form, descricao: e.target.value })}
-                        />
+        const handleEventDelete= (eventId) =>{
 
-                        <div className="modal-actions">
-                            {eventoAtual && <button onClick={excluir}>Excluir</button>}
-                            <button onClick={salvar}>Salvar</button>
-                        </div>
-                    </div>
+            const updatedEvents = eventos.filter((event) => event.id !== eventId)
+            setEventos(updatedEvents);
+            SeteventoSelecionado(null);
+        };
+
+        const handleEventUpdate = (updatedEvent) =>{
+
+            const updatedEvents = eventos.map((event) =>{
+                if(event.id === updatedEvent.id){
+                    return updatedEvent;
+                }
+                return event;
+            });
+            setEventos(updatedEvents);
+            SeteventoSelecionado(null);
+        }
+
+        const handleSelecionarAtividades = (atividadesSelecionadas) =>{
+            setEventosFiltrados(atividadesSelecionadas);
+        }
+        
+
+
+        const handleSelectSlot = ({ start, end }) => {
+    
+            const defaultEnd = end || new Date(new Date(start).getTime() + 60 * 60 * 1000);
+            setSelectedSlot({ start, end: defaultEnd });
+            setShowAddModal(true);
+        };
+
+        const handleCreate = async ({ title, desc, start, end }) => {
+            try {
+                const horario = new Date(start).toTimeString().slice(0,5);
+                const body = { horario, titulo: title, dataInicio: start, dataFim: end, descricao: desc };
+                const res = await fetch(`${URL_API}/events`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${token}` },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(()=>({message:res.statusText}));
+                    return alert(err.message || 'Erro ao criar evento');
+                }
+                const created = await res.json();
+                const newEvent = {
+                    id: created.id || created.evento?.id || created.rows?.[0]?.id || Math.random(),
+                    title: created.titulo || title,
+                    start: new Date(created.dataInicio || start),
+                    end: new Date(created.dataFim || end),
+                    desc: created.descricao || desc,
+                };
+                setEventos((s) => [...s, newEvent]);
+                setEventosFiltrados((s) => [...s, newEvent]);
+                setShowAddModal(false);
+                setSelectedSlot(null);
+            } catch (err) {
+                console.error('Erro ao criar evento:', err);
+                alert('Erro de conexão ao criar evento');
+            }
+        };
+
+        return (
+            <div className='tela ' >
+                <div className='toolbar p-4' style={{maxHeight:'100vh', overflowY:'auto'}}>
+                    <Adicionar onAdicionar= {handleAdicionar}/>
+
+                    <FiltroAtividades atividades={eventos} onSelecionarAtividades={handleSelecionarAtividades}/>
                 </div>
-            )}
-        </>
-    );
-}
 
-export default Eventos;
+                <div className='calendario'>
+                    <DragAndDropCalendar
+                        selectable
+                        defaultDate={moment().toDate()}
+                        defaultView='month'
+                        events={eventosFiltrados}
+                        localizer={localizer}
+                        resizable
+                        onEventDrop={moverEventos}
+                        onEventResize={moverEventos}
+                        onSelectEvent={handleEventClick}
+                        onSelectSlot={handleSelectSlot}
+                        eventPropGetter={eventStyle}
+                        components={{
+                            toolbar: CustomTollbar,
+                        }}
+                        className='calendar'
+                    />
+                </div>
+                {eventoSelecionado && (
+                    <EventModal evento={eventoSelecionado} onClose={handleEventClose}  onDelete={handleEventDelete} onUpdate={handleEventUpdate}/>
+                )}
+
+                <AddEventModal
+                    show={showAddModal}
+                    onClose={() => { setShowAddModal(false); setSelectedSlot(null); }}
+                    defaultStart={selectedSlot?.start}
+                    defaultEnd={selectedSlot?.end}
+                    onCreate={handleCreate}
+                />
+            </div>
+        );
+    }
+
+
+    export default Calendario;
