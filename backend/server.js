@@ -61,9 +61,13 @@ pool.query(
       dataInicio TEXT,
       dataFim TEXT,
       descricao TEXT,
+      tipo TEXT,
       FOREIGN KEY(userId) REFERENCES users(id)
   )`
 );
+
+// Ensure column exists for older DBs
+pool.query("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS tipo TEXT");
 
 
 function autenticarToken(req, res, next) {
@@ -207,7 +211,7 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 });
 
 app.post("/events", autenticarToken, async (req, res) => {
-  const { horario, titulo, dataInicio, dataFim, descricao } = req.body;
+  const { horario, titulo, dataInicio, dataFim, descricao, tipo } = req.body;
 
   if (!titulo || !dataInicio || !dataFim)
     return res.status(400).json({ message: "Campos obrigatórios!" });
@@ -215,11 +219,11 @@ app.post("/events", autenticarToken, async (req, res) => {
   try {
     const result = await pool.query(
       `
-      INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao)
-      VALUES ($1,$2,$3,$4,$5,$6)
+      INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
       RETURNING *
       `,
-      [req.userId, horario, titulo, dataInicio, dataFim, descricao]
+      [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo]
     );
 
     res.status(201).json(result.rows[0]);
@@ -306,17 +310,17 @@ app.get("/events/:id", autenticarToken, async (req, res) => {
 
 
 app.put("/events/:id", autenticarToken, async (req, res) => {
-  const { titulo, dataInicio, dataFim, descricao } = req.body;
+  const { titulo, dataInicio, dataFim, descricao, tipo } = req.body;
   const { id } = req.params;
 
   try {
     await pool.query(
       `
       UPDATE eventos
-      SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4
-      WHERE id=$5 AND userId=$6
+      SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5
+      WHERE id=$6 AND userId=$7
       `,
-      [titulo, dataInicio, dataFim, descricao, id, req.userId]
+      [titulo, dataInicio, dataFim, descricao, tipo, id, req.userId]
     );
 
     res.json({ message: "Evento atualizado!" });

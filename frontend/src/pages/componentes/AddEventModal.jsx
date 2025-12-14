@@ -15,12 +15,14 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
     const [start, setStart] = useState('');
     const [end, setEnd] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [tipo, setTipo] = useState('');
 
     useEffect(() => {
         if (defaultStart) setStart(formatForInput(defaultStart));
         if (defaultEnd) setEnd(formatForInput(defaultEnd));
         setTitle('');
         setDesc('');
+        setTipo('');
     }, [defaultStart, defaultEnd, show]);
 
     const handleSave = async () => {
@@ -31,7 +33,7 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
 
         try {
             setSubmitting(true);
-            await onCreate({ title, desc, start: s.toISOString(), end: e.toISOString() });
+            await onCreate({ title, desc, tipo, start: s.toISOString(), end: e.toISOString() });
             Swal.fire({ icon: 'success', text: 'Evento criado com sucesso!', timer: 1500, showConfirmButton: false });
             onClose();
         } catch (err) {
@@ -57,6 +59,11 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
                     <Form.Group className='mb-2'>
                         <Form.Label>Descrição</Form.Label>
                         <Form.Control as='textarea' rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} />
+                    </Form.Group>
+
+                    <Form.Group className='mb-2'>
+                        <Form.Label>Tipo</Form.Label>
+                        <Form.Control type='text' value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder='Ex: Trabalho, Pessoal' />
                     </Form.Group>
 
                     <Form.Group className='mb-2'>

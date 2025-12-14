@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import moment from 'moment';
+import 'moment/locale/pt-br';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 
@@ -29,6 +30,31 @@ function Calendario() {
     const URL_API = import.meta.env.VITE_API_URL;
 
 
+    moment.locale('pt-br');
+
+    const messages = {
+        allDay: 'Dia inteiro',
+        previous: 'Anterior',
+        next: 'Próximo',
+        today: 'Hoje',
+        month: 'Mês',
+        Sunday: 'Domingo',
+        Monday: 'Segunda',
+        Tuesday: 'Terça',
+        Wednesday: 'Quarta',
+        Thursday: 'Quinta',
+        Friday: 'Sexta',
+        Saturday: 'Sábado',
+        week: 'Semana',
+        day: 'Dia',
+        agenda: 'Agenda',
+        date: 'Data',
+        time: 'Horário',
+        event: 'Evento',
+        noEventsInRange: 'Nenhum evento nesse período.',
+        showMore: (total) => `+${total} mais`,
+    };
+
     const eventStyle = (event) => ({
         style: {
             backgroundColor: event.color || '#3174ad',
@@ -51,45 +77,53 @@ function Calendario() {
     };
 
 
-    useEffect(() => {
-        const fetchEvents = async () => {
-            try {
-                const res = await fetch(`${URL_API}/events`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        authorization: `Bearer ${token}`,
-                    },
-                });
+    const fetchEvents = useCallback(async () => {
+        try {
+            const res = await fetch(`${URL_API}/events`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    authorization: `Bearer ${token}`,
+                },
+            });
 
-                if (!res.ok) return;
-
-                const data = await res.json();
-
-                const lista = Array.isArray(data)
-                    ? data
-                    : Array.isArray(data.eventos)
-                        ? data.eventos
-                        : [];
-
-                const mapped = lista.map((e) => ({
-                    id: e.id,
-                    title: e.titulo || 'Sem título',
-                    start: new Date(e.dataInicio),
-                    end: new Date(e.dataFim),
-                    desc: e.descricao || '',
-                    color: e.color,
-                }));
-
-                setEventos(mapped);
-                setEventosFiltrados(mapped);
-            } catch (err) {
-                console.error('Erro ao buscar eventos:', err);
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
             }
-        };
 
-        fetchEvents();
+            if (!res.ok) return;
+
+            const data = await res.json();
+
+            const lista = Array.isArray(data)
+                ? data
+                : Array.isArray(data.eventos)
+                    ? data.eventos
+                    : [];
+
+            const mapped = lista.map((e) => ({
+                id: e.id,
+                title: e.titulo || 'Sem título',
+                start: new Date(e.dataInicio),
+                end: new Date(e.dataFim),
+                desc: e.descricao || '',
+                color: e.color,
+                tipo: e.tipo || '',
+            }));
+
+            setEventos(mapped);
+            setEventosFiltrados(mapped);
+        } catch (err) {
+            console.error('Erro ao buscar eventos:', err);
+        }
     }, [URL_API, token]);
+
+    // fetch events on mount
+    useEffect(() => {
+        fetchEvents();
+    }, [fetchEvents]);
 
 
     const handleEventClick = (evento) => {
@@ -106,20 +140,25 @@ function Calendario() {
         setEditingEvent(null);
     };
 
-    const handleUpdateEvent = async ({ id, title, desc, start, end }) => {
+    const handleUpdateEvent = async ({ id, title, desc, tipo, start, end }) => {
         if (!token) return Swal.fire({ icon: 'warning', text: 'Você precisa estar logado' });
         try {
             const res = await fetch(`${URL_API}/events/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-                body: JSON.stringify({ titulo: title, descricao: desc, dataInicio: start, dataFim: end }),
+                body: JSON.stringify({ titulo: title, descricao: desc, dataInicio: start, dataFim: end, tipo }),
             });
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ message: res.statusText }));
                 throw new Error(err.message || 'Erro ao atualizar evento');
             }
-            setEventos((prev) => prev.map((ev) => (ev.id === id ? { ...ev, title, desc, start: new Date(start), end: new Date(end) } : ev)));
-            setEventosFiltrados((prev) => prev.map((ev) => (ev.id === id ? { ...ev, title, desc, start: new Date(start), end: new Date(end) } : ev)));
+            // refresh from server to get authoritative data
+            await fetchEvents();
             setEditingEvent(null);
         } catch (err) {
             console.error('Erro ao atualizar evento:', err);
@@ -134,12 +173,17 @@ function Calendario() {
                 method: 'DELETE',
                 headers: { authorization: `Bearer ${token}` },
             });
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ message: res.statusText }));
                 throw new Error(err.message || 'Erro ao deletar evento');
             }
-            setEventos((prev) => prev.filter((ev) => ev.id !== id));
-            setEventosFiltrados((prev) => prev.filter((ev) => ev.id !== id));
+            // refresh list from server
+            await fetchEvents();
             setEditingEvent(null);
         } catch (err) {
             console.error('Erro ao deletar evento:', err);
@@ -158,6 +202,7 @@ function Calendario() {
                 dataInicio: novoEvento.start,
                 dataFim: novoEvento.end,
                 descricao: novoEvento.desc || '',
+                tipo: novoEvento.tipo || ''
             };
 
             const res = await fetch(`${URL_API}/events`, {
@@ -169,48 +214,26 @@ function Calendario() {
                 body: JSON.stringify(body),
             });
 
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
+
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ message: res.statusText }));
                 throw new Error(err.message || 'Erro ao criar evento');
             }
 
-            const created = await res.json();
-            const newEvent = {
-                id: created.id || created.evento?.id || Math.random(),
-                title: created.titulo || novoEvento.title,
-                start: new Date(created.dataInicio || novoEvento.start),
-                end: new Date(created.dataFim || novoEvento.end),
-                desc: created.descricao || novoEvento.desc || '',
-            };
-
-            setEventos((prev) => {
-                const updated = [...prev, newEvent];
-                setEventosFiltrados(updated);
-                return updated;
-            });
-
-            alert('Evento criado com sucesso!');
+            // refresh list
+            await fetchEvents();
+            Swal.fire({ icon: 'success', text: 'Evento criado com sucesso!', timer: 1200, showConfirmButton: false });
         } catch (err) {
             console.error('Erro ao persistir evento:', err);
             throw err;
         }
     };
 
-    const handleEventDelete = (eventId) => {
-        const updated = eventos.filter((event) => event.id !== eventId);
-        setEventos(updated);
-        setEventosFiltrados(updated);
-        setEventoSelecionado(null);
-    };
-
-    const handleEventUpdate = (updatedEvent) => {
-        const updated = eventos.map((event) =>
-            event.id === updatedEvent.id ? updatedEvent : event
-        );
-        setEventos(updated);
-        setEventosFiltrados(updated);
-        setEventoSelecionado(null);
-    };
 
     const handleSelecionarAtividades = (atividadesSelecionadas) => {
         setEventosFiltrados(atividadesSelecionadas || []);
@@ -245,11 +268,17 @@ function Calendario() {
                 body: JSON.stringify(body),
             });
 
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
+
             if (!res.ok) {
                 const err = await res
                     .json()
                     .catch(() => ({ message: res.statusText }));
-                alert(err.message || 'Erro ao criar evento');
+                Swal.fire({ icon: 'error', text: err.message || 'Erro ao criar evento' });
                 return;
             }
 
@@ -277,7 +306,7 @@ function Calendario() {
             setSelectedSlot(null);
         } catch (err) {
             console.error('Erro ao criar evento:', err);
-            alert('Erro de conexão ao criar evento');
+                Swal.fire({ icon: 'error', text: 'Erro de conexão ao criar evento' });
         }
     };
 
@@ -301,6 +330,7 @@ function Calendario() {
                     selectable
                     defaultDate={moment().toDate()}
                     defaultView="month"
+                    views={["month","week","day"]}
                     events={eventosFiltrados || []}
                     localizer={localizer}
                     resizable
@@ -310,6 +340,7 @@ function Calendario() {
                     onSelectSlot={handleSelectSlot}
                     eventPropGetter={eventStyle}
                     components={{ toolbar: CustomToolbar }}
+                    messages={messages}
                     className="calendar"
                 />
             </div>
@@ -318,8 +349,8 @@ function Calendario() {
                 <EventModal
                     evento={eventoSelecionado}
                     onClose={handleEventClose}
-                    onDelete={handleEventDelete}
-                    onUpdate={handleEventUpdate}
+                    onDelete={async (id) => { await handleDeleteEvent(id); handleEventClose(); }}
+                    onUpdate={async (edited) => { await handleUpdateEvent({ id: edited.id, title: edited.title, desc: edited.desc, tipo: edited.tipo, start: edited.start.toISOString(), end: edited.end.toISOString() }); handleEventClose(); }}
                 />
             )}
 

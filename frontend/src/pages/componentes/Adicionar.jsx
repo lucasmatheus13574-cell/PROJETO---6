@@ -8,6 +8,7 @@ function Adicionar({ onAdicionar, editingEvent, onUpdate, onDelete, onCancelEdit
     const [desc, setDesc] = useState('');
     const [start, setStart] = useState('');
     const [end, setEnd] = useState('');
+    const [tipo, setTipo] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -16,11 +17,13 @@ function Adicionar({ onAdicionar, editingEvent, onUpdate, onDelete, onCancelEdit
             setDesc(editingEvent.desc || '');
             setStart(editingEvent.start ? new Date(editingEvent.start).toISOString().slice(0,16) : '');
             setEnd(editingEvent.end ? new Date(editingEvent.end).toISOString().slice(0,16) : '');
+            setTipo(editingEvent.tipo || '');
         } else {
             setTitle('');
             setDesc('');
             setStart('');
             setEnd('');
+            setTipo('');
         }
     }, [editingEvent]);
 
@@ -30,11 +33,11 @@ function Adicionar({ onAdicionar, editingEvent, onUpdate, onDelete, onCancelEdit
         try {
             setSubmitting(true);
             if (editingEvent) {
-                await onUpdate({ id: editingEvent.id, title, desc, start: new Date(start).toISOString(), end: new Date(end).toISOString() });
+                await onUpdate({ id: editingEvent.id, title, desc, tipo, start: new Date(start).toISOString(), end: new Date(end).toISOString() });
                 Swal.fire({ icon: 'success', text: 'Evento atualizado!', timer: 1200, showConfirmButton: false });
                 if (onCancelEdit) onCancelEdit();
             } else {
-                await onAdicionar({ title, desc, start: new Date(start).toISOString(), end: new Date(end).toISOString() });
+                await onAdicionar({ title, desc, tipo, start: new Date(start).toISOString(), end: new Date(end).toISOString() });
                 Swal.fire({ icon: 'success', text: 'Evento criado!', timer: 1200, showConfirmButton: false });
             }
             setTitle('');
