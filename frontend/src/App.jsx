@@ -8,12 +8,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Routes>''
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/tarefas" element={<Tarefas />} />
-        <Route path="/Calendario" element={<Calendario />} />
+        <Route path="/eventos" element={<Calendario />} />
       </Routes>
     </BrowserRouter>
   );
