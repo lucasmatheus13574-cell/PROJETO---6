@@ -27,7 +27,6 @@ function Calendario() {
     const token = localStorage.getItem('token');
     const URL_API = import.meta.env.VITE_API_URL;
 
-
     moment.locale('pt-br');
 
     const messages = {
@@ -62,7 +61,6 @@ function Calendario() {
         },
     });
 
-
 const moverEventos = async ({ event, start, end }) => {
     const updatedEvents = eventos.map((e) =>
         e.id === event.id
@@ -86,9 +84,10 @@ const moverEventos = async ({ event, start, end }) => {
             }),
         });
     } catch (err) {
-        console.error('Erro ao salvar drag & drop:', err);
+        console.error('Erro ao salvar movimentação:', err);
     }
 };
+
 
     const fetchEvents = useCallback(async () => {
         try {
@@ -133,11 +132,9 @@ const moverEventos = async ({ event, start, end }) => {
         }
     }, [URL_API, token]);
 
-    // fetch events on mount
     useEffect(() => {
         fetchEvents();
     }, [fetchEvents]);
-
 
     const handleEventClick = (evento) => {
         setEventoSelecionado(evento);
@@ -146,8 +143,6 @@ const moverEventos = async ({ event, start, end }) => {
     const handleEventClose = () => {
         setEventoSelecionado(null);
     };
-
-
 
     const handleUpdateEvent = async ({ id, title, desc, tipo, start, end }) => {
         if (!token) return Swal.fire({ icon: 'warning', text: 'Você precisa estar logado' });
@@ -166,12 +161,9 @@ const moverEventos = async ({ event, start, end }) => {
                 const err = await res.json().catch(() => ({ message: res.statusText }));
                 throw new Error(err.message || 'Erro ao atualizar evento');
             }
-            // refresh from server to get authoritative data
-            await fetchEvents();
-            
+            await fetchEvents();    
         } catch (err) {
             console.error('Erro ao atualizar evento:', err);
-            throw err;
         }
     };
 
@@ -191,32 +183,24 @@ const moverEventos = async ({ event, start, end }) => {
                 const err = await res.json().catch(() => ({ message: res.statusText }));
                 throw new Error(err.message || 'Erro ao deletar evento');
             }
-            // refresh list from server
             await fetchEvents();
-            
-            
         } catch (err) {
             console.error('Erro ao deletar evento:', err);
-            throw err;
         }
     };
-
-
-
 
     const handleSelecionarAtividades = (atividadesSelecionadas) => {
         setEventosFiltrados(atividadesSelecionadas || []);
     };
 
     const handleSelectSlot = ({ start, end }) => {
-        const defaultEnd =
-            end || new Date(new Date(start).getTime() + 60 * 60 * 1000);
+        const defaultEnd = end || new Date(new Date(start).getTime() + 60 * 60 * 1000);
 
         setSelectedSlot({ start, end: defaultEnd });
         setShowAddModal(true);
     };
 
-    const handleCreate = async ({ title, desc, start, end }) => {
+    const handleCreate = async ({ title, desc, tipo, start, end }) => {
         try {
             const horario = new Date(start).toTimeString().slice(0, 5);
 
@@ -226,6 +210,7 @@ const moverEventos = async ({ event, start, end }) => {
                 dataInicio: start,
                 dataFim: end,
                 descricao: desc,
+                tipo: tipo || ''
             };
 
             const res = await fetch(`${URL_API}/events`, {
@@ -251,25 +236,8 @@ const moverEventos = async ({ event, start, end }) => {
                 return;
             }
 
-            const created = await res.json();
-
-            const newEvent = {
-                id:
-                    created.id ||
-                    created.evento?.id ||
-                    created.rows?.[0]?.id ||
-                    Math.random(),
-                title: created.titulo || title,
-                start: new Date(created.dataInicio || start),
-                end: new Date(created.dataFim || end),
-                desc: created.descricao || desc,
-            };
-
-            setEventos((prev) => {
-                const updated = [...prev, newEvent];
-                setEventosFiltrados(updated);
-                return updated;
-            });
+            // Refresh from server to ensure persistence on reload
+            await fetchEvents();
 
             setShowAddModal(false);
             setSelectedSlot(null);
@@ -279,13 +247,9 @@ const moverEventos = async ({ event, start, end }) => {
         }
     };
 
-
     return (
         <div className="tela">
-            <div
-                className="toolbar p-4"
-                style={{ maxHeight: '100vh', overflowY: 'auto' }}
-            >
+            <div className="toolbar p-4" style={{ maxHeight: '100vh', overflowY: 'auto' }}>
                 <FiltroAtividades
                     atividades={eventos}
                     onSelecionarAtividades={handleSelecionarAtividades}
@@ -297,7 +261,7 @@ const moverEventos = async ({ event, start, end }) => {
                     selectable
                     defaultDate={moment().toDate()}
                     defaultView="month"
-                    views={["month", "week", "day"]}
+                    views={['month', 'week', 'day']}
                     events={eventosFiltrados || []}
                     localizer={localizer}
                     resizable
@@ -318,9 +282,8 @@ const moverEventos = async ({ event, start, end }) => {
                                     setShowAddModal(true);
                                 }}
                             />
-                        )
+                        ),
                     }}
-
                     messages={messages}
                     className="calendar"
                 />

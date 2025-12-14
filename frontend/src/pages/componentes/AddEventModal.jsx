@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 
 const formatForInput = (date) => {
     const d = new Date(date);
-    // convert to local for datetime-local input
+    
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().slice(0, 16);
 };
