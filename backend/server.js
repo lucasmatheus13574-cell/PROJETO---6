@@ -242,26 +242,6 @@ app.get("/eventos", autenticarToken, (req, res) => {
 });
 
 
-app.get("/events", autenticarToken, async (req, res) => {
-  const { start, end } = req.query;
-
-  try {
-    let query = "SELECT * FROM eventos WHERE userId = $1";
-    const params = [req.userId];
-
-    if (start && end) {
-      query += " AND dataInicio >= $2 AND dataFim <= $3";
-      params.push(start, end);
-    }
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Erro ao buscar events:", err);
-    res.status(500).json({ message: "Erro ao buscar eventos!" });
-  }
-});
-
 
 
 
