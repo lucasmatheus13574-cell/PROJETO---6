@@ -71,7 +71,7 @@ const moverEventos = async ({ event, start, end }) => {
     setEventos(updatedEvents);
     setEventosFiltrados(updatedEvents);
 
-    // Atualiza localStorage para persistir alteração imediata
+
     try {
         const toSave = updatedEvents.map(ev => ({ id: ev.id, titulo: ev.title, dataInicio: ev.start.toISOString(), dataFim: ev.end.toISOString(), descricao: ev.desc || '', tipo: ev.tipo || '', color: ev.color }));
         localStorage.setItem('events', JSON.stringify(toSave));
@@ -116,6 +116,7 @@ const moverEventos = async ({ event, start, end }) => {
             if (!res.ok) return;
 
             const data = await res.json();
+            console.debug('fetchEvents raw response:', data);
 
 
             const lista = Array.isArray(data)
@@ -124,19 +125,47 @@ const moverEventos = async ({ event, start, end }) => {
                     ? data.eventos
                     : [];
 
-            const normalize = (rows) => rows.map((e) => ({
-                id: e.id,
-                title: e.titulo || 'Sem título',
-                start: e.dataInicio ? new Date(e.dataInicio) : new Date(),
-                end: e.dataFim ? new Date(e.dataFim) : new Date(),
-                desc: e.descricao || '',
-                color: e.color,
-                tipo: e.tipo || '',
-            }));
+            // Carrega cópia local para poder preservar datas locais caso o servidor retorne inválidas
+            let savedRows = [];
+            try {
+                const s = localStorage.getItem('events');
+                if (s) savedRows = JSON.parse(s);
+            } catch (err) {
+                console.error('Erro ao ler events salvos para merge:', err);
+            }
+
+            const normalize = (rows) => rows.map((e) => {
+                const startMoment = moment(e.dataInicio);
+                const endMoment = moment(e.dataFim);
+
+                let startDate = startMoment.isValid() ? startMoment.toDate() : null;
+                let endDate = endMoment.isValid() ? endMoment.toDate() : null;
+
+                if (!startDate || !endDate) {
+                    // procura nos salvos por id
+                    const saved = savedRows.find(r => String(r.id) === String(e.id));
+                    if (saved) {
+                        if (!startDate && saved.dataInicio) startDate = moment(saved.dataInicio).isValid() ? moment(saved.dataInicio).toDate() : startDate;
+                        if (!endDate && saved.dataFim) endDate = moment(saved.dataFim).isValid() ? moment(saved.dataFim).toDate() : endDate;
+                    }
+                }
+
+                if (!startDate || !endDate) console.warn('Evento com datas ausentes ou inválidas após tentativa de merge:', e, { startDate, endDate });
+
+                return {
+                    id: e.id,
+                    title: e.titulo || 'Sem título',
+                    start: startDate || new Date(),
+                    end: endDate || new Date(),
+                    desc: e.descricao || '',
+                    color: e.color,
+                    tipo: e.tipo || '',
+                };
+            });
 
             const mapped = normalize(lista);
 
-            // Atualiza cópia local para persistir entre reloads
+
             try { localStorage.setItem('events', JSON.stringify(lista)); } catch (err) { console.error('Erro ao salvar eventos no localStorage:', err); }
 
             setEventos(mapped);
@@ -150,7 +179,7 @@ const moverEventos = async ({ event, start, end }) => {
     }, [URL_API, token]);
 
     useEffect(() => {
-        // Carrega eventos salvos no localStorage imediatamente (para não desaparecerem no refresh)
+
         try {
             const saved = localStorage.getItem('events');
             if (saved) {
@@ -158,8 +187,8 @@ const moverEventos = async ({ event, start, end }) => {
                 const normalized = parsed.map((e) => ({
                     id: e.id,
                     title: e.titulo || 'Sem título',
-                    start: e.dataInicio ? new Date(e.dataInicio) : new Date(),
-                    end: e.dataFim ? new Date(e.dataFim) : new Date(),
+                    start: e.dataInicio ? moment(e.dataInicio).toDate() : new Date(),
+                    end: e.dataFim ? moment(e.dataFim).toDate() : new Date(),
                     desc: e.descricao || '',
                     color: e.color,
                     tipo: e.tipo || '',
@@ -171,7 +200,7 @@ const moverEventos = async ({ event, start, end }) => {
             console.error('Erro ao ler eventos do localStorage:', err);
         }
 
-        // Atualiza com os eventos do servidor
+
         fetchEvents();
     }, [fetchEvents]);
 
@@ -240,6 +269,7 @@ const moverEventos = async ({ event, start, end }) => {
     };
 
     const handleCreate = async ({ title, desc, tipo, start, end }) => {
+        console.debug('handleCreate sending', { title, desc, tipo, start, end });
         try {
             const horario = new Date(start).toTimeString().slice(0, 5);
 
@@ -277,11 +307,12 @@ const moverEventos = async ({ event, start, end }) => {
 
 
             const created = await res.json();
+            console.debug('Created response:', created);
             const newEvent = {
                 id: created.id || created.evento?.id || created.rows?.[0]?.id || Math.random(),
                 title: created.titulo || title,
-                start: new Date(created.dataInicio || start),
-                end: new Date(created.dataFim || end),
+                start: moment(created.dataInicio || start).toDate(),
+                end: moment(created.dataFim || end).toDate(),
                 desc: created.descricao || desc,
                 tipo: created.tipo || tipo || ''
             };
@@ -289,6 +320,10 @@ const moverEventos = async ({ event, start, end }) => {
             setEventos((prev) => {
                 const updated = [...prev, newEvent];
                 console.debug('Optimistic add ->', newEvent);
+                try {
+                    const toSave = updated.map(ev => ({ id: ev.id, titulo: ev.title, dataInicio: ev.start.toISOString(), dataFim: ev.end.toISOString(), descricao: ev.desc || '', tipo: ev.tipo || '', color: ev.color }));
+                    localStorage.setItem('events', JSON.stringify(toSave));
+                } catch (err) { console.error('Erro ao salvar evento criado no localStorage:', err); }
                 return updated;
             });
 

@@ -122,13 +122,13 @@ app.post("/login", async (req, res) => {
     if (!valid) return res.status(401).json({ message: "Senha incorreta!" });
 
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "7d" });
-    // Também retornamos os eventos do usuário para o cliente não precisar buscar imediatamente
+
     try {
       const eventsRes = await pool.query("SELECT * FROM eventos WHERE userId = $1", [user.id]);
       res.json({ message: "Login OK!", token, events: eventsRes.rows });
     } catch (err) {
       console.error("Erro ao buscar eventos no login:", err);
-      // Mesmo que falhe ao buscar eventos, retornamos o token
+
       res.json({ message: "Login OK!", token, events: [] });
     }
   } catch (error) {
@@ -139,7 +139,7 @@ app.post("/login", async (req, res) => {
 
 
 app.get("/login", autenticarToken, (req, res) => {
-  // Retorna também os eventos do usuário autenticado para manter o estado no cliente
+
   pool.query("SELECT * FROM eventos WHERE userId = $1", [req.userId], (err, result) => {
     if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
     res.json({ message: "Token válido!, Rota funcionando ", events: result.rows });
@@ -238,6 +238,7 @@ app.post("/events", autenticarToken, async (req, res) => {
       [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo]
     );
 
+    console.debug('Event inserted:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error("Add event error:", err);
@@ -270,6 +271,7 @@ app.get("/events", autenticarToken, async (req, res) => {
     }
 
     const result = await pool.query(query, params);
+    console.debug('Events fetched for user', req.userId, 'count', result.rows.length, 'sample', result.rows[0]);
     res.json(result.rows);
   } catch (err) {
     console.error("Erro ao buscar events:", err);
