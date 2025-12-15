@@ -143,3 +143,15 @@
     font-weight: bold;
     color: #e0e0e0;
 }
+
+/* Year view month tile */
+.year-month{
+    transition: box-shadow 120ms ease, transform 120ms ease;
+}
+.year-month:hover{
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    transform: translateY(-3px);
+}
+.year-month button.btn-outline-primary{
+    padding: 2px 8px;
+}
