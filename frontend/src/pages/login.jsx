@@ -31,7 +31,7 @@ function Login() {
         if (data.token) {
             localStorage.setItem("token", data.token);
             if (data.events) localStorage.setItem("events", JSON.stringify(data.events));
-            navigate("/tarefas"); 
+            navigate("/eventos");
         }
     };
 
