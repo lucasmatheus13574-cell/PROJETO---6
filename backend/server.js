@@ -227,23 +227,42 @@ app.post("/events", autenticarToken, async (req, res) => {
 
   if (!titulo || !dataInicio || !dataFim)
     return res.status(400).json({ message: "Campos obrigatórios!" });
-
-  try {
-    const result = await pool.query(
-      ` 
-      INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-      RETURNING *
-      `,
-      [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color || null]
-    );
-
-    res.status(201).json({ message: "Evento adicionado!", event: result.rows[0] });
+    try {
+      const result = await pool.query(
+        ` 
+        INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        RETURNING *
+        `,
+        [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color || null]
+      );
+      res.status(201).json(result.rows[0]);
     
-  } catch (err) {
-    console.error("Add event error:", err);
-    res.status(500).json({ message: "Erro ao adicionar evento!" });
-  }
+    } catch (err) {
+      console.error("Add event error:", err);
+      // If DB doesn't have 'color' column (e.g., older schema), retry without color
+      console.error('Insert event error, retrying without color if applicable:', err.message || err);
+      if (err.code === '42703' || (err.message && err.message.toLowerCase().includes('column "color"'))) {
+        try {
+          const result2 = await pool.query(
+            ` 
+            INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo)
+            VALUES ($1,$2,$3,$4,$5,$6,$7)
+            RETURNING *
+            `,
+            [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo]
+          );
+          console.debug('Event inserted (without color):', result2.rows[0]);
+          res.status(201).json(result2.rows[0]);
+        } catch (err2) {
+          console.error('Fallback insert also failed:', err2);
+          res.status(500).json({ message: 'Erro ao adicionar evento!' });
+        }
+      } else {
+        res.status(500).json({ message: 'Erro ao adicionar evento!' });
+      }
+    }
+
 });
 
 
@@ -308,16 +327,33 @@ app.put("/events/:id", autenticarToken, async (req, res) => {
   const { id } = req.params;
 
   try {
-    await pool.query(
-      `
-      UPDATE eventos
-      SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5, color=$6
-      WHERE id=$7 AND userId=$8
-      `,
-      [titulo, dataInicio, dataFim, descricao, tipo, color || null, id, req.userId]
-    );
+    try {
+      await pool.query(
+        `
+        UPDATE eventos
+        SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5, color=$6
+        WHERE id=$7 AND userId=$8
+        `,
+        [titulo, dataInicio, dataFim, descricao, tipo, color || null, id, req.userId]
+      );
 
-    res.json({ message: "Evento atualizado!" });
+      res.json({ message: "Evento atualizado!" });
+    } catch (err) {
+      console.error('Update event error with color, retrying without color if needed:', err.message || err);
+      if (err.code === '42703' || (err.message && err.message.toLowerCase().includes('column "color"'))) {
+        await pool.query(
+          `
+          UPDATE eventos
+          SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5
+          WHERE id=$6 AND userId=$7
+          `,
+          [titulo, dataInicio, dataFim, descricao, tipo, id, req.userId]
+        );
+        res.json({ message: "Evento atualizado!" });
+      } else {
+        throw err;
+      }
+    }
   } catch (err) {
     console.error("Update event error:", err);
     res.status(500).json({ message: "Erro ao atualizar evento!" });

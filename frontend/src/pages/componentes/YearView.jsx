@@ -57,7 +57,7 @@ export default function YearView(props) {
     const [year, setYear] = useState(initialYear);
 
     useEffect(() => {
-        // keep in sync when calendar date changes externally
+        
         const dYear = moment(date).year();
         if (dYear !== year) setYear(dYear);
     }, [date, year]);
@@ -73,9 +73,9 @@ export default function YearView(props) {
 
     const maxCount = Math.max(...eventsByMonth.map(a => a.length), 0);
 
-    // ensure onNavigate moves calendar when year state changes externally
+    
     useEffect(() => {
-        // no-op placeholder in case we want to sync
+        
     }, [year]);
 
     const handleDrill = (monthIndex) => {
