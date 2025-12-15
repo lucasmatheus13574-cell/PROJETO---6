@@ -127,8 +127,11 @@ const moverEventos = async ({ event, start, end }) => {
 
             setEventos(mapped);
             setEventosFiltrados(mapped);
+            console.debug('fetchEvents ->', mapped.map(ev => ({ id: ev.id, title: ev.title })));
+            return mapped;
         } catch (err) {
             console.error('Erro ao buscar eventos:', err);
+            return [];
         }
     }, [URL_API, token]);
 
@@ -236,8 +239,29 @@ const moverEventos = async ({ event, start, end }) => {
                 return;
             }
 
-            // Refresh from server to ensure persistence on reload
-            await fetchEvents();
+            // add created event optimistically so it appears immediately
+            const created = await res.json();
+            const newEvent = {
+                id: created.id || created.evento?.id || created.rows?.[0]?.id || Math.random(),
+                title: created.titulo || title,
+                start: new Date(created.dataInicio || start),
+                end: new Date(created.dataFim || end),
+                desc: created.descricao || desc,
+                tipo: created.tipo || tipo || ''
+            };
+
+            setEventos((prev) => {
+                const updated = [...prev, newEvent];
+                console.debug('Optimistic add ->', newEvent);
+                return updated;
+            });
+
+            const fresh = await fetchEvents();
+            const existsOnServer = fresh.some(f => String(f.id) === String(created.id));
+            if (!existsOnServer) {
+                console.warn('Evento criado não apareceu no servidor após POST', created);
+                Swal.fire({ icon: 'warning', text: 'Evento criado localmente, mas não encontrado no servidor. Tente novamente.' });
+            }
 
             setShowAddModal(false);
             setSelectedSlot(null);
