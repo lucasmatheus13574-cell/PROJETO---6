@@ -238,8 +238,8 @@ app.post("/events", autenticarToken, async (req, res) => {
       [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color || null]
     );
 
-    console.debug('Event inserted:', result.rows[0]);
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ message: "Evento adicionado!", event: result.rows[0] });
+    
   } catch (err) {
     console.error("Add event error:", err);
     res.status(500).json({ message: "Erro ao adicionar evento!" });
