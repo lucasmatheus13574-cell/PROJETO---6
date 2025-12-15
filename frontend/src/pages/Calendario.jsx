@@ -23,11 +23,21 @@ function Calendario() {
     const [eventoSelecionado, setEventoSelecionado] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState(null);
+    const [createMode, setCreateMode] = useState('event');
 
     const token = localStorage.getItem('token');
     const URL_API = import.meta.env.VITE_API_URL;
 
     moment.locale('pt-br');
+
+
+    const getFirst = (obj, ...keys) => {
+        if (!obj) return undefined;
+        for (const k of keys) {
+            if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+        }
+        return undefined;
+    };
 
     const messages = {
         allDay: 'Dia inteiro',
@@ -61,71 +71,69 @@ function Calendario() {
         },
     });
 
-const moverEventos = async ({ event, start, end }) => {
-    const updatedEvents = eventos.map((e) =>
-        e.id === event.id
-            ? { ...e, start: new Date(start), end: new Date(end) }
-            : e
-    );
+    const moverEventos = async ({ event, start, end }) => {
+        const updatedEvents = eventos.map((e) =>
+            e.id === event.id
+                ? { ...e, start: new Date(start), end: new Date(end) }
+                : e
+        );
 
-    setEventos(updatedEvents);
-    setEventosFiltrados(updatedEvents);
-
-
-    try {
-        const toSave = updatedEvents.map(ev => ({ id: ev.id, titulo: ev.title, dataInicio: ev.start.toISOString(), dataFim: ev.end.toISOString(), descricao: ev.desc || '', tipo: ev.tipo || '', color: ev.color }));
-        localStorage.setItem('events', JSON.stringify(toSave));
-    } catch (err) {
-        console.error('Erro ao atualizar events no localStorage:', err);
-    }
-
-    try {
-        await fetch(`${URL_API}/events/${event.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-                dataInicio: start,
-                dataFim: end,
-            }),
-        });
-    } catch (err) {
-        console.error('Erro ao salvar movimentação:', err);
-    }
-};
+        setEventos(updatedEvents);
+        setEventosFiltrados(updatedEvents);
 
 
-    const fetchEvents = useCallback(async () => {
         try {
-            const res = await fetch(`${URL_API}/events`, {
-                method: 'GET',
+            const toSave = updatedEvents.map(ev => ({ id: ev.id, titulo: ev.title, dataInicio: ev.start.toISOString(), dataFim: ev.end.toISOString(), descricao: ev.desc || '', tipo: ev.tipo || '', color: ev.color }));
+            localStorage.setItem('events', JSON.stringify(toSave));
+        } catch (err) {
+            console.error('Erro ao atualizar events no localStorage:', err);
+        }
+
+        try {
+            await fetch(`${URL_API}/events/${event.id}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     authorization: `Bearer ${token}`,
                 },
+                body: JSON.stringify({
+                    dataInicio: start,
+                    dataFim: end,
+                }),
             });
+        } catch (err) {
+            console.error('Erro ao salvar movimentação:', err);
+        }
+    };
 
-            if (res.status === 401) {
+
+    const fetchEvents = useCallback(async () => {
+        try {
+            const [resEvents, resTasks] = await Promise.all([
+                fetch(`${URL_API}/events`, { method: 'GET', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` } }),
+                fetch(`${URL_API}/tarefas`, { method: 'GET', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` } }),
+            ]);
+
+            if (resEvents.status === 401 || resTasks.status === 401) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
                 return;
             }
 
-            if (!res.ok) return;
+            if (!resEvents.ok || !resTasks.ok) return;
+            const dataEvents = await resEvents.json().catch(() => []);
+            const dataTasks = await resTasks.json().catch(() => []);
+            console.debug('fetchEvents raw events:', dataEvents, 'tasks:', dataTasks);
 
-            const data = await res.json();
-            console.debug('fetchEvents raw response:', data);
+
+            const eventsList = Array.isArray(dataEvents) ? dataEvents : (Array.isArray(dataEvents.eventos) ? dataEvents.eventos : []);
+            const tasksList = Array.isArray(dataTasks) ? dataTasks : (Array.isArray(dataTasks.tarefas) ? dataTasks.tarefas : []);
+
+            const tasksAsEvents = tasksList.map(t => ({ id: `t-${t.id}`, titulo: t.tarefa, dataInicio: t.data, dataFim: t.data, descricao: t.prioridade || '', tipo: 'Tarefa' }));
+
+            const lista = [...eventsList, ...tasksAsEvents];
 
 
-            const lista = Array.isArray(data)
-                ? data
-                : Array.isArray(data.eventos)
-                    ? data.eventos
-                    : [];
-
-            // Carrega cópia local para poder preservar datas locais caso o servidor retorne inválidas
             let savedRows = [];
             try {
                 const s = localStorage.getItem('events');
@@ -141,13 +149,20 @@ const moverEventos = async ({ event, start, end }) => {
                 let startDate = startMoment.isValid() ? startMoment.toDate() : null;
                 let endDate = endMoment.isValid() ? endMoment.toDate() : null;
 
-                if (!startDate || !endDate) {
-                    // procura nos salvos por id
-                    const saved = savedRows.find(r => String(r.id) === String(e.id));
-                    if (saved) {
-                        if (!startDate && saved.dataInicio) startDate = moment(saved.dataInicio).isValid() ? moment(saved.dataInicio).toDate() : startDate;
-                        if (!endDate && saved.dataFim) endDate = moment(saved.dataFim).isValid() ? moment(saved.dataFim).toDate() : endDate;
-                    }
+                const saved = savedRows.find(r => String(r.id) === String(e.id));
+                if ((!startDate || !endDate) && saved) {
+                    const savedStart = getFirst(saved, 'dataInicio', 'datainicio', 'data_inicio', 'start');
+                    const savedEnd = getFirst(saved, 'dataFim', 'datafim', 'data_fim', 'end');
+                    if (!startDate && savedStart) startDate = moment(savedStart).isValid() ? moment(savedStart).toDate() : startDate;
+                    if (!endDate && savedEnd) endDate = moment(savedEnd).isValid() ? moment(savedEnd).toDate() : endDate;
+                }
+
+
+                if (startMoment.isValid() && startMoment.hours && startMoment.hours() === 0 && startMoment.minutes() === 0) {
+                    startDate = moment(startMoment).add(12, 'hours').toDate();
+                }
+                if (endMoment.isValid() && endMoment.hours && endMoment.hours() === 0 && endMoment.minutes() === 0) {
+                    endDate = moment(endMoment).add(13, 'hours').toDate();
                 }
 
                 if (!startDate || !endDate) console.warn('Evento com datas ausentes ou inválidas após tentativa de merge:', e, { startDate, endDate });
@@ -187,8 +202,8 @@ const moverEventos = async ({ event, start, end }) => {
                 const normalized = parsed.map((e) => ({
                     id: e.id,
                     title: e.titulo || 'Sem título',
-                    start: e.dataInicio ? moment(e.dataInicio).toDate() : new Date(),
-                    end: e.dataFim ? moment(e.dataFim).toDate() : new Date(),
+                    start: e.dataInicio ? (moment(e.dataInicio).hours() === 0 ? moment(e.dataInicio).add(12,'hours').toDate() : moment(e.dataInicio).toDate()) : new Date(),
+                    end: e.dataFim ? (moment(e.dataFim).hours() === 0 ? moment(e.dataFim).add(13,'hours').toDate() : moment(e.dataFim).toDate()) : new Date(),   
                     desc: e.descricao || '',
                     color: e.color,
                     tipo: e.tipo || '',
@@ -215,41 +230,48 @@ const moverEventos = async ({ event, start, end }) => {
     const handleUpdateEvent = async ({ id, title, desc, tipo, start, end }) => {
         if (!token) return Swal.fire({ icon: 'warning', text: 'Você precisa estar logado' });
         try {
-            const res = await fetch(`${URL_API}/events/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-                body: JSON.stringify({ titulo: title, descricao: desc, dataInicio: start, dataFim: end, tipo }),
-            });
-            if (res.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
+            if (String(id).startsWith('t-')) {
+                const taskId = String(id).slice(2);
+                const res = await fetch(`${URL_API}/tarefas/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ tarefa: title, data: start, prioridade: desc }),
+                });
+                if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+                if (!res.ok) { const err = await res.json().catch(() => ({ message: res.statusText })); throw new Error(err.message || 'Erro ao atualizar tarefa'); }
+            } else {
+                const res = await fetch(`${URL_API}/events/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ titulo: title, descricao: desc, dataInicio: start, dataFim: end, tipo }),
+                });
+                if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+                if (!res.ok) { const err = await res.json().catch(() => ({ message: res.statusText })); throw new Error(err.message || 'Erro ao atualizar evento'); }
             }
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ message: res.statusText }));
-                throw new Error(err.message || 'Erro ao atualizar evento');
-            }
-            await fetchEvents();    
+            await fetchEvents();
         } catch (err) {
-            console.error('Erro ao atualizar evento:', err);
+            console.error('Erro ao atualizar evento/tarefa:', err);
         }
     };
 
     const handleDeleteEvent = async (id) => {
         if (!token) return Swal.fire({ icon: 'warning', text: 'Você precisa estar logado' });
         try {
-            const res = await fetch(`${URL_API}/events/${id}`, {
-                method: 'DELETE',
-                headers: { authorization: `Bearer ${token}` },
-            });
-            if (res.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ message: res.statusText }));
-                throw new Error(err.message || 'Erro ao deletar evento');
+            if (String(id).startsWith('t-')) {
+                const taskId = String(id).slice(2);
+                const res = await fetch(`${URL_API}/tarefas/${taskId}`, {
+                    method: 'DELETE',
+                    headers: { authorization: `Bearer ${token}` },
+                });
+                if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+                if (!res.ok) { const err = await res.json().catch(() => ({ message: res.statusText })); throw new Error(err.message || 'Erro ao deletar tarefa'); }
+            } else {
+                const res = await fetch(`${URL_API}/events/${id}`, {
+                    method: 'DELETE',
+                    headers: { authorization: `Bearer ${token}` },
+                });
+                if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+                if (!res.ok) { const err = await res.json().catch(() => ({ message: res.statusText })); throw new Error(err.message || 'Erro ao deletar evento'); }
             }
             await fetchEvents();
         } catch (err) {
@@ -262,13 +284,70 @@ const moverEventos = async ({ event, start, end }) => {
     };
 
     const handleSelectSlot = ({ start, end }) => {
-        const defaultEnd = end || new Date(new Date(start).getTime() + 60 * 60 * 1000);
 
-        setSelectedSlot({ start, end: defaultEnd });
+        const s = new Date(start);
+        const e = end ? new Date(end) : new Date(s.getTime() + 60 * 60 * 1000);
+
+        const isMidnight = (d) => d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0;
+        if (isMidnight(s) && (end == null || isMidnight(e))) {
+            s.setHours(12, 0, 0, 0);
+            e.setHours(13, 0, 0, 0);
+        }
+
+        console.debug('Selected slot normalized', { start: s, end: e });
+        setSelectedSlot({ start: s, end: e });
+        setCreateMode('event');
         setShowAddModal(true);
     };
 
-    const handleCreate = async ({ title, desc, tipo, start, end }) => {
+    const handleCreate = async (payload) => {
+        const { mode = 'event' } = payload || {};
+        if (mode === 'task') {
+            const { title, desc, prioridade, data } = payload;
+            console.debug('handleCreate TASK sending', { title, desc, prioridade, data });
+            try {
+                const dataISO = data instanceof Date ? data.toISOString() : moment(data).toISOString();
+                const body = { tarefa: title, data: dataISO, prioridade: prioridade || '' };
+                const res = await fetch(`${URL_API}/tarefas`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                    body: JSON.stringify(body),
+                });
+                if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ message: res.statusText }));
+                    Swal.fire({ icon: 'error', text: err.message || 'Erro ao criar tarefa' });
+                    return;
+                }
+                const created = await res.json();
+                const tarefa = created.tarefa || created;
+                const tarefaMoment = moment(tarefa.data);
+                const startForTask = tarefaMoment.hours() === 0 && tarefaMoment.minutes() === 0 ? tarefaMoment.add(12, 'hours') : tarefaMoment;
+                const newEvent = {
+                    id: `t-${tarefa.id}`,
+                    title: tarefa.tarefa,
+                    start: startForTask.toDate(),
+                    end: startForTask.clone().add(1, 'hour').toDate(),
+                    desc: tarefa.prioridade || '',
+                    tipo: 'Tarefa'
+                };
+                setEventos((prev) => {
+                    const updated = [...prev, newEvent];
+                    try { const toSave = updated.map(ev => ({ id: ev.id, titulo: ev.title, dataInicio: ev.start.toISOString(), dataFim: ev.end.toISOString(), descricao: ev.desc || '', tipo: ev.tipo || '', color: ev.color })); localStorage.setItem('events', JSON.stringify(toSave)); } catch (err) { console.error('Erro ao salvar evento criado no localStorage:', err); }
+                    return updated;
+                });
+                await fetchEvents();
+                setShowAddModal(false);
+                setSelectedSlot(null);
+            } catch (err) {
+                console.error('Erro ao criar tarefa:', err);
+                Swal.fire({ icon: 'error', text: 'Erro de conexão ao criar tarefa' });
+            }
+            return;
+        }
+
+        // default: event
+        const { title, desc, tipo, start, end } = payload;
         console.debug('handleCreate sending', { title, desc, tipo, start, end });
         try {
             const horario = new Date(start).toTimeString().slice(0, 5);
@@ -276,8 +355,8 @@ const moverEventos = async ({ event, start, end }) => {
             const body = {
                 horario,
                 titulo: title,
-                dataInicio: start,
-                dataFim: end,
+                dataInicio: moment(start).format('YYYY-MM-DD HH:mm:ss'),
+                dataFim: moment(end).format('YYYY-MM-DD HH:mm:ss'),
                 descricao: desc,
                 tipo: tipo || ''
             };
@@ -356,7 +435,7 @@ const moverEventos = async ({ event, start, end }) => {
                     selectable
                     defaultDate={moment().toDate()}
                     defaultView="month"
-                    views={['month', 'week', 'day']}
+                    views={['month', 'week', 'day', 'year']}
                     events={eventosFiltrados || []}
                     localizer={localizer}
                     resizable
@@ -369,12 +448,18 @@ const moverEventos = async ({ event, start, end }) => {
                         toolbar: (props) => (
                             <CustomToolbar
                                 {...props}
-                                onAddEvent={() => {
-                                    setSelectedSlot({
-                                        start: new Date(),
-                                        end: new Date(Date.now() + 60 * 60 * 1000),
-                                    });
-                                    setShowAddModal(true);
+                                onAddEvent={(kind) => {
+                                    if (kind === 'task') {
+                                        // Open modal in 'task' mode, default to today midday
+                                        setSelectedSlot({ start: new Date(), end: new Date(Date.now() + 60 * 60 * 1000) });
+                                        setCreateMode('task');
+                                        setShowAddModal(true);
+                                    } else {
+                                        // Event
+                                        setSelectedSlot({ start: new Date(), end: new Date(Date.now() + 60 * 60 * 1000) });
+                                        setCreateMode('event');
+                                        setShowAddModal(true);
+                                    }
                                 }}
                             />
                         ),
@@ -383,6 +468,8 @@ const moverEventos = async ({ event, start, end }) => {
                     className="calendar"
                 />
             </div>
+
+
 
             {eventoSelecionado && (
                 <EventModal
@@ -395,6 +482,7 @@ const moverEventos = async ({ event, start, end }) => {
 
             <AddEventModal
                 show={showAddModal}
+                mode={createMode}
                 onClose={() => {
                     setShowAddModal(false);
                     setSelectedSlot(null);

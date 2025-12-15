@@ -25,15 +25,20 @@ const CustomToolbar = ({
                         {view === 'month' && 'Mês'}
                         {view === 'week' && 'Semana'}
                         {view === 'day' && 'Dia'}
+                        {view === 'year' && 'Ano'   }
                     </button>
                 ))}
             </span>
 
         
-            <span className="rbc-btn-group">
-                <button className="btn btn-primary" onClick={onAddEvent}>
-                    +
-                </button>
+            <span className="rbc-btn-group add-dropdown">
+                <div className="btn-group">
+                    <button className="btn btn-primary dropdown-toggle" type="button">+</button>
+                    <div className="dropdown-menu" style={{padding: '6px'}}>
+                        <button className="dropdown-item" onClick={() => onAddEvent('event')}>Evento</button>
+                        <button className="dropdown-item" onClick={() => onAddEvent('task')}>Tarefa</button>
+                    </div>
+                </div>
             </span>
         </div>
     );

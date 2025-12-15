@@ -230,7 +230,7 @@ app.post("/events", autenticarToken, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `
+      ` 
       INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
       RETURNING *
@@ -340,6 +340,7 @@ app.delete("/events/:id", autenticarToken, async (req, res) => {
     res.status(500).json({ message: "Erro ao excluir evento!" });
   }
 });
+
 
 
 

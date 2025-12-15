@@ -9,7 +9,7 @@ const formatForInput = (date) => {
     return d.toISOString().slice(0, 16);
 };
 
-function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
+function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate, mode = 'event' }) {
     const [title, setTitle] = useState('');
     const [desc, setDesc] = useState('');
     const [start, setStart] = useState('');
@@ -18,14 +18,34 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
     const [tipo, setTipo] = useState('');
 
     useEffect(() => {
-        if (defaultStart) setStart(formatForInput(defaultStart));
+        if (defaultStart) {
+            if (mode === 'task') setStart(new Date(defaultStart).toISOString().slice(0,10));
+            else setStart(formatForInput(defaultStart));
+        }
         if (defaultEnd) setEnd(formatForInput(defaultEnd));
         setTitle('');
         setDesc('');
         setTipo('');
-    }, [defaultStart, defaultEnd, show]);
+    }, [defaultStart, defaultEnd, show, mode]);
 
     const handleSave = async () => {
+        if (mode === 'task') {
+            if (!title || !start) return Swal.fire({ icon: 'warning', text: 'Preencha título e data' });
+            const s = new Date(start);
+            try {
+                setSubmitting(true);
+                await onCreate({ title, desc, prioridade: tipo, data: s.toISOString(), mode: 'task' });
+                Swal.fire({ icon: 'success', text: 'Tarefa criada com sucesso!', timer: 1500, showConfirmButton: false });
+                onClose();
+            } catch (err) {
+                console.error('Erro no modal ao criar tarefa:', err);
+                Swal.fire({ icon: 'error', text: err?.message || 'Erro ao criar tarefa' });
+            } finally {
+                setSubmitting(false);
+            }
+            return;
+        }
+
         if (!title || !start || !end) return Swal.fire({ icon: 'warning', text: 'Preencha título, início e fim' });
         const s = new Date(start);
         const e = new Date(end);
@@ -33,7 +53,7 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
 
         try {
             setSubmitting(true);
-            await onCreate({ title, desc, tipo, start: s.toISOString(), end: e.toISOString() });
+            await onCreate({ title, desc, tipo, start: s.toISOString(), end: e.toISOString(), mode: 'event' });
             Swal.fire({ icon: 'success', text: 'Evento criado com sucesso!', timer: 1500, showConfirmButton: false });
             onClose();
         } catch (err) {
@@ -47,7 +67,7 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
     return (
         <Modal show={show} onHide={onClose}>
             <Modal.Header closeButton>
-                <Modal.Title>Novo Evento</Modal.Title>
+                <Modal.Title>{mode === 'task' ? 'Nova Tarefa' : 'Novo Evento'}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form>
@@ -56,30 +76,54 @@ function AddEventModal({ show, onClose, defaultStart, defaultEnd, onCreate }) {
                         <Form.Control value={title} onChange={(e) => setTitle(e.target.value)} />
                     </Form.Group>
 
-                    <Form.Group className='mb-2'>
-                        <Form.Label>Descrição</Form.Label>
-                        <Form.Select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-                            <option value="">Selecione</option>
-                            <option value="Trabalho">Trabalho</option>
-                            <option value="Pessoal">Pessoal</option>
-                        </Form.Select>
+                    {mode === 'task' ? (
+                        <>
+                            <Form.Group className='mb-2'>
+                                <Form.Label>Descrição</Form.Label>
+                                <Form.Control as="textarea" rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} />
+                            </Form.Group>
+                            <Form.Group className='mb-2'>
+                                <Form.Label>Prioridade</Form.Label>
+                                <Form.Select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                                    <option value="">Selecione</option>
+                                    <option value="Baixa">Baixa</option>
+                                    <option value="Média">Média</option>
+                                    <option value="Alta">Alta</option>
+                                </Form.Select>
+                            </Form.Group>
+                            <Form.Group className='mb-2'>
+                                <Form.Label>Data</Form.Label>
+                                <Form.Control type='date' value={start} onChange={(e) => setStart(e.target.value)} />
+                            </Form.Group>
+                        </>
+                    ) : (
+                        <>
+                            <Form.Group className='mb-2'>
+                                <Form.Label>Descrição</Form.Label>
+                                <Form.Select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                                    <option value="">Selecione</option>
+                                    <option value="Trabalho">Trabalho</option>
+                                    <option value="Pessoal">Pessoal</option>
+                                </Form.Select>
 
-                    </Form.Group>
+                            </Form.Group>
 
-                    <Form.Group className='mb-2'>
-                        <Form.Label>Tipo</Form.Label>
-                        <Form.Control type='text' value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder='Ex: Trabalho, Pessoal' />
-                    </Form.Group>
+                            <Form.Group className='mb-2'>
+                                <Form.Label>Tipo</Form.Label>
+                                <Form.Control type='text' value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder='Ex: Trabalho, Pessoal' />
+                            </Form.Group>
 
-                    <Form.Group className='mb-2'>
-                        <Form.Label>Início</Form.Label>
-                        <Form.Control type='datetime-local' value={start} onChange={(e) => setStart(e.target.value)} />
-                    </Form.Group>
+                            <Form.Group className='mb-2'>
+                                <Form.Label>Início</Form.Label>
+                                <Form.Control type='datetime-local' value={start} onChange={(e) => setStart(e.target.value)} />
+                            </Form.Group>
 
-                    <Form.Group className='mb-2'>
-                        <Form.Label>Fim</Form.Label>
-                        <Form.Control type='datetime-local' value={end} onChange={(e) => setEnd(e.target.value)} />
-                    </Form.Group>
+                            <Form.Group className='mb-2'>
+                                <Form.Label>Fim</Form.Label>
+                                <Form.Control type='datetime-local' value={end} onChange={(e) => setEnd(e.target.value)} />
+                            </Form.Group>
+                        </>
+                    )}
                 </Form>
             </Modal.Body>
             <Modal.Footer>
