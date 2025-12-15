@@ -161,17 +161,17 @@ app.get("/tarefas", autenticarToken, (req, res) => {
 app.post("/tarefas", autenticarToken, async (req, res) => {
   const { tarefa, data, prioridade } = req.body;
 
-  if (!tarefa || !data || !prioridade)
-    return res.status(400).json({ message: "Todos os campos são obrigatórios!" });
+  if (!tarefa || !data)
+    return res.status(400).json({ message: "Título e data são obrigatórios!" });
 
   try {
     const result = await pool.query(
       "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES ($1, $2, $3, $4) RETURNING id",
-      [req.userId, tarefa, data, prioridade]
+      [req.userId, tarefa, data, prioridade || '']
     );
     res.status(201).json({
       message: "Tarefa adicionada!",
-      tarefa: { id: result.rows[0].id, tarefa, data, prioridade, concluida: 0 }
+      tarefa: { id: result.rows[0].id, tarefa, data, prioridade: prioridade || '', concluida: 0 }
     });
   } catch (err) {
     console.error("Add tarefa error:", err);
