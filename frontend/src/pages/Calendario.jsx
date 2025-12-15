@@ -71,6 +71,14 @@ const moverEventos = async ({ event, start, end }) => {
     setEventos(updatedEvents);
     setEventosFiltrados(updatedEvents);
 
+    // Atualiza localStorage para persistir alteração imediata
+    try {
+        const toSave = updatedEvents.map(ev => ({ id: ev.id, titulo: ev.title, dataInicio: ev.start.toISOString(), dataFim: ev.end.toISOString(), descricao: ev.desc || '', tipo: ev.tipo || '', color: ev.color }));
+        localStorage.setItem('events', JSON.stringify(toSave));
+    } catch (err) {
+        console.error('Erro ao atualizar events no localStorage:', err);
+    }
+
     try {
         await fetch(`${URL_API}/events/${event.id}`, {
             method: 'PUT',
@@ -109,21 +117,27 @@ const moverEventos = async ({ event, start, end }) => {
 
             const data = await res.json();
 
+
             const lista = Array.isArray(data)
                 ? data
                 : Array.isArray(data.eventos)
                     ? data.eventos
                     : [];
 
-            const mapped = lista.map((e) => ({
+            const normalize = (rows) => rows.map((e) => ({
                 id: e.id,
                 title: e.titulo || 'Sem título',
-                start: new Date(e.dataInicio),
-                end: new Date(e.dataFim),
+                start: e.dataInicio ? new Date(e.dataInicio) : new Date(),
+                end: e.dataFim ? new Date(e.dataFim) : new Date(),
                 desc: e.descricao || '',
                 color: e.color,
                 tipo: e.tipo || '',
             }));
+
+            const mapped = normalize(lista);
+
+            // Atualiza cópia local para persistir entre reloads
+            try { localStorage.setItem('events', JSON.stringify(lista)); } catch (err) { console.error('Erro ao salvar eventos no localStorage:', err); }
 
             setEventos(mapped);
             setEventosFiltrados(mapped);
@@ -136,6 +150,28 @@ const moverEventos = async ({ event, start, end }) => {
     }, [URL_API, token]);
 
     useEffect(() => {
+        // Carrega eventos salvos no localStorage imediatamente (para não desaparecerem no refresh)
+        try {
+            const saved = localStorage.getItem('events');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                const normalized = parsed.map((e) => ({
+                    id: e.id,
+                    title: e.titulo || 'Sem título',
+                    start: e.dataInicio ? new Date(e.dataInicio) : new Date(),
+                    end: e.dataFim ? new Date(e.dataFim) : new Date(),
+                    desc: e.descricao || '',
+                    color: e.color,
+                    tipo: e.tipo || '',
+                }));
+                setEventos(normalized);
+                setEventosFiltrados(normalized);
+            }
+        } catch (err) {
+            console.error('Erro ao ler eventos do localStorage:', err);
+        }
+
+        // Atualiza com os eventos do servidor
         fetchEvents();
     }, [fetchEvents]);
 
@@ -239,7 +275,7 @@ const moverEventos = async ({ event, start, end }) => {
                 return;
             }
 
-            // add created event optimistically so it appears immediately
+
             const created = await res.json();
             const newEvent = {
                 id: created.id || created.evento?.id || created.rows?.[0]?.id || Math.random(),

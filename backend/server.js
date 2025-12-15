@@ -66,7 +66,7 @@ pool.query(
   )`
 );
 
-// Ensure column exists for older DBs
+
 pool.query("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS tipo TEXT");
 
 
@@ -122,7 +122,15 @@ app.post("/login", async (req, res) => {
     if (!valid) return res.status(401).json({ message: "Senha incorreta!" });
 
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "7d" });
-    res.json({ message: "Login OK!", token });
+    // Também retornamos os eventos do usuário para o cliente não precisar buscar imediatamente
+    try {
+      const eventsRes = await pool.query("SELECT * FROM eventos WHERE userId = $1", [user.id]);
+      res.json({ message: "Login OK!", token, events: eventsRes.rows });
+    } catch (err) {
+      console.error("Erro ao buscar eventos no login:", err);
+      // Mesmo que falhe ao buscar eventos, retornamos o token
+      res.json({ message: "Login OK!", token, events: [] });
+    }
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Erro no servidor!" });
@@ -131,7 +139,11 @@ app.post("/login", async (req, res) => {
 
 
 app.get("/login", autenticarToken, (req, res) => {
-  res.json({ message: "Token válido!, Rota funcionando " });
+  // Retorna também os eventos do usuário autenticado para manter o estado no cliente
+  pool.query("SELECT * FROM eventos WHERE userId = $1", [req.userId], (err, result) => {
+    if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
+    res.json({ message: "Token válido!, Rota funcionando ", events: result.rows });
+  });
 });
 
 
