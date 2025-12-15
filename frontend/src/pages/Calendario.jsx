@@ -160,11 +160,15 @@
                     let endDate = endMoment.isValid() ? endMoment.toDate() : null;
 
                     const saved = savedRows.find(r => String(r.id) === String(e.id));
-                    if ((!startDate || !endDate) && saved) {
+                    if (saved) {
                         const savedStart = getFirst(saved, 'dataInicio', 'datainicio', 'data_inicio', 'start');
                         const savedEnd = getFirst(saved, 'dataFim', 'datafim', 'data_fim', 'end');
-                        if (!startDate && savedStart) startDate = moment(savedStart).isValid() ? moment(savedStart).toDate() : startDate;
-                        if (!endDate && savedEnd) endDate = moment(savedEnd).isValid() ? moment(savedEnd).toDate() : endDate;
+                        if ((!startDate || !endDate) && saved) {
+                            if (!startDate && savedStart) startDate = moment(savedStart).isValid() ? moment(savedStart).toDate() : startDate;
+                            if (!endDate && savedEnd) endDate = moment(savedEnd).isValid() ? moment(savedEnd).toDate() : endDate;
+                        }
+                        // prefer saved color if server didn't include it
+                        if (!e.color && saved.color) e.color = saved.color;
                     }
 
 
@@ -237,7 +241,7 @@
             setEventoSelecionado(null);
         };
 
-        const handleUpdateEvent = async ({ id, title, desc, tipo, start, end }) => {
+        const handleUpdateEvent = async ({ id, title, desc, tipo, start, end, color }) => {
             if (!token) return Swal.fire({ icon: 'warning', text: 'Você precisa estar logado' });
             try {
                 if (String(id).startsWith('t-')) {
@@ -253,11 +257,18 @@
                     const res = await fetch(`${URL_API}/events/${id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ titulo: title, descricao: desc, dataInicio: start, dataFim: end, tipo }),
+                        body: JSON.stringify({ titulo: title, descricao: desc, dataInicio: start, dataFim: end, tipo, color }),
                     });
                     if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
                     if (!res.ok) { const err = await res.json().catch(() => ({ message: res.statusText })); throw new Error(err.message || 'Erro ao atualizar evento'); }
                 }
+                // Optimistically update local state so color change is immediate
+                setEventos(prev => {
+                    const updatedEvents = prev.map(ev => ev.id === id ? { ...ev, title, desc, tipo, start: new Date(start), end: new Date(end), color: color || ev.color } : ev);
+                    try { const toSave = updatedEvents.map(ev => ({ id: ev.id, titulo: ev.title, dataInicio: ev.start.toISOString(), dataFim: ev.end.toISOString(), descricao: ev.desc || '', tipo: ev.tipo || '', color: ev.color })); localStorage.setItem('events', JSON.stringify(toSave)); } catch (err) { console.error('Erro ao salvar evento atualizado no localStorage:', err); }
+                    return updatedEvents;
+                });
+
                 await fetchEvents();
             } catch (err) {
                 console.error('Erro ao atualizar evento/tarefa:', err);
@@ -494,7 +505,7 @@
                         evento={eventoSelecionado}
                         onClose={handleEventClose}
                         onDelete={async (id) => { await handleDeleteEvent(id); handleEventClose(); }}
-                        onUpdate={async (edited) => { await handleUpdateEvent({ id: edited.id, title: edited.title, desc: edited.desc, tipo: edited.tipo, start: edited.start.toISOString(), end: edited.end.toISOString() }); handleEventClose(); }}
+                            onUpdate={async (edited) => { await handleUpdateEvent({ id: edited.id, title: edited.title, desc: edited.desc, tipo: edited.tipo, start: edited.start.toISOString(), end: edited.end.toISOString(), color: edited.color }); handleEventClose(); }}
                     />
                 )}
 

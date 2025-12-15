@@ -223,7 +223,7 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 });
 
 app.post("/events", autenticarToken, async (req, res) => {
-  const { horario, titulo, dataInicio, dataFim, descricao, tipo } = req.body;
+  const { horario, titulo, dataInicio, dataFim, descricao, tipo, color } = req.body;
 
   if (!titulo || !dataInicio || !dataFim)
     return res.status(400).json({ message: "Campos obrigatórios!" });
@@ -231,11 +231,11 @@ app.post("/events", autenticarToken, async (req, res) => {
   try {
     const result = await pool.query(
       ` 
-      INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       RETURNING *
       `,
-      [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo]
+      [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color || null]
     );
 
     console.debug('Event inserted:', result.rows[0]);
@@ -304,17 +304,17 @@ app.get("/events/:id", autenticarToken, async (req, res) => {
 
 
 app.put("/events/:id", autenticarToken, async (req, res) => {
-  const { titulo, dataInicio, dataFim, descricao, tipo } = req.body;
+  const { titulo, dataInicio, dataFim, descricao, tipo, color } = req.body;
   const { id } = req.params;
 
   try {
     await pool.query(
       `
       UPDATE eventos
-      SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5
-      WHERE id=$6 AND userId=$7
+      SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5, color=$6
+      WHERE id=$7 AND userId=$8
       `,
-      [titulo, dataInicio, dataFim, descricao, tipo, id, req.userId]
+      [titulo, dataInicio, dataFim, descricao, tipo, color || null, id, req.userId]
     );
 
     res.json({ message: "Evento atualizado!" });
