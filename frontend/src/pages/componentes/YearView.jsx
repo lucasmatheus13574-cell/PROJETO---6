@@ -137,7 +137,7 @@ export default function YearView(props) {
     );
 }
 
-// Provide a title function so the calendar toolbar can render a title for the custom view
+
 YearView.title = (date) => {
     try {
         return `Ano ${moment(date).year()}`;

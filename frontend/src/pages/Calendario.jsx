@@ -143,9 +143,18 @@
                     console.error('Erro ao ler events salvos para merge:', err);
                 }
 
+                const tryParse = (val) => {
+                    if (!val) return moment.invalid();
+                    // try ISO first, then common SQL format, then native Date
+                    let m = moment(val, moment.ISO_8601, true);
+                    if (!m.isValid()) m = moment(val, 'YYYY-MM-DD HH:mm:ss', true);
+                    if (!m.isValid()) m = moment(new Date(val));
+                    return m;
+                };
+
                 const normalize = (rows) => rows.map((e) => {
-                    const startMoment = moment(e.dataInicio);
-                    const endMoment = moment(e.dataFim);
+                    const startMoment = tryParse(e.dataInicio);
+                    const endMoment = tryParse(e.dataFim);
 
                     let startDate = startMoment.isValid() ? startMoment.toDate() : null;
                     let endDate = endMoment.isValid() ? endMoment.toDate() : null;
@@ -307,7 +316,7 @@
                 const { title, desc, prioridade, data } = payload;
                 console.debug('handleCreate TASK sending', { title, desc, prioridade, data });
                 try {
-                    // Force midday for tasks to avoid timezone-caused day shifts
+
                     const m = data instanceof Date ? moment(data) : moment(data, 'YYYY-MM-DD');
                     const dataISO = m.hour(12).minute(0).second(0).millisecond(0).toISOString();
                     const body = { tarefa: title, data: dataISO, prioridade: prioridade || '' };
@@ -349,7 +358,7 @@
                 return;
             }
 
-            // default: event
+
             const { title, desc, tipo, start, end } = payload;
             console.debug('handleCreate sending', { title, desc, tipo, start, end });
             try {
@@ -390,11 +399,16 @@
 
                 const created = await res.json();
                 console.debug('Created response:', created);
+                const parsedStart = moment(created.dataInicio || body.dataInicio || start, ['YYYY-MM-DD HH:mm:ss', moment.ISO_8601], true);
+                const parsedEnd = moment(created.dataFim || body.dataFim || end, ['YYYY-MM-DD HH:mm:ss', moment.ISO_8601], true);
+                const fallbackStart = moment(start).isValid() ? moment(start) : (parsedStart.isValid() ? parsedStart : moment());
+                const fallbackEnd = moment(end).isValid() ? moment(end) : (parsedEnd.isValid() ? parsedEnd : moment());
+
                 const newEvent = {
                     id: created.id || created.evento?.id || created.rows?.[0]?.id || Math.random(),
                     title: created.titulo || title,
-                    start: moment(created.dataInicio || start).toDate(),
-                    end: moment(created.dataFim || end).toDate(),
+                    start: (parsedStart.isValid() ? parsedStart : fallbackStart).toDate(),
+                    end: (parsedEnd.isValid() ? parsedEnd : fallbackEnd).toDate(),
                     desc: created.descricao || desc,
                     tipo: created.tipo || tipo || ''
                 };
