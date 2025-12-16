@@ -56,15 +56,18 @@ pool.query(
   `CREATE TABLE IF NOT EXISTS eventos (
       id SERIAL PRIMARY KEY,
       userId INTEGER,
-      horario TEXT,
       titulo TEXT,
-      dataInicio TEXT,
-      dataFim TEXT,
-      descricao TEXT,
-      tipo TEXT,
+      start_date_time TEXT,
+      end_date_time TEXT,
+      description TEXT,
+      color TEXT,
       FOREIGN KEY(userId) REFERENCES users(id)
   )`
 );
+
+
+
+
 
 
 pool.query("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS tipo TEXT");
@@ -222,161 +225,46 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
   );
 });
 
-app.post("/events", autenticarToken, async (req, res) => {
-  const { horario, titulo, dataInicio, dataFim, descricao, tipo, color } = req.body;
-
-  if (!titulo || !dataInicio || !dataFim)
-    return res.status(400).json({ message: "Campos obrigatórios!" });
-    try {
-      const result = await pool.query(
-        ` 
-        INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-        RETURNING *
-        `,
-        [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo, color || null]
-      );
-      res.status(201).json(result.rows[0]);
-    
-    } catch (err) {
-      console.error("Add event error:", err);
-      // If DB doesn't have 'color' column (e.g., older schema), retry without color
-      console.error('Insert event error, retrying without color if applicable:', err.message || err);
-      if (err.code === '42703' || (err.message && err.message.toLowerCase().includes('column "color"'))) {
-        try {
-          const result2 = await pool.query(
-            ` 
-            INSERT INTO eventos (userId, horario, titulo, dataInicio, dataFim, descricao, tipo)
-            VALUES ($1,$2,$3,$4,$5,$6,$7)
-            RETURNING *
-            `,
-            [req.userId, horario, titulo, dataInicio, dataFim, descricao, tipo]
-          );
-          console.debug('Event inserted (without color):', result2.rows[0]);
-          res.status(201).json(result2.rows[0]);
-        } catch (err2) {
-          console.error('Fallback insert also failed:', err2);
-          res.status(500).json({ message: 'Erro ao adicionar evento!' });
-        }
-      } else {
-        res.status(500).json({ message: 'Erro ao adicionar evento!' });
-      }
-    }
-
-});
-
-
-app.get("/eventos", autenticarToken, (req, res) => {
-  pool.query("SELECT * FROM eventos WHERE userId = $1", [req.userId], (err, result) => {
-    if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
-    res.json(result.rows);
-  });
-});
 
 
 
 
 
 app.get("/events", autenticarToken, async (req, res) => {
-  const { start, end } = req.query;
-
-  try {
-    let query = "SELECT * FROM eventos WHERE userId = $1";
-    const params = [req.userId];
-
-    if (start && end) {
-      query += " AND dataInicio >= $2 AND dataFim <= $3";
-      params.push(start, end);
-    }
-
-    const result = await pool.query(query, params);
-    console.debug('Events fetched for user', req.userId, 'count', result.rows.length, 'sample', result.rows[0]);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Erro ao buscar events:", err);
-    res.status(500).json({ message: "Erro ao buscar eventos!" });
-  }
+const events = await pool.query("SELECT * FROM events WHERE user_id=$1", [req.userId]);
+res.json(events.rows);
 });
 
 
+app.post("/events", autenticarToken, async (req, res) => {
+const { title, description, start, end, color } = req.body;
+if (new Date(start) >= new Date(end)) return res.status(400).json({ message: "Datas inválidas" });
 
 
-app.get("/events/:id", autenticarToken, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const result = await pool.query(
-      "SELECT * FROM eventos WHERE id = $1 AND userId = $2",
-      [id, req.userId]
-    );
-
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: "Evento não encontrado!" });
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("Erro ao buscar event:", err);
-    res.status(500).json({ message: "Erro ao buscar evento!" });
-  }
+const result = await pool.query(
+`INSERT INTO events (user_id,title,description,start_date_time,end_date_time,color)
+VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+[req.userId, title, description, start, end, color]
+);
+res.status(201).json(result.rows[0]);
 });
-
 
 
 app.put("/events/:id", autenticarToken, async (req, res) => {
-  const { titulo, dataInicio, dataFim, descricao, tipo, color } = req.body;
-  const { id } = req.params;
-
-  try {
-    try {
-      await pool.query(
-        `
-        UPDATE eventos
-        SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5, color=$6
-        WHERE id=$7 AND userId=$8
-        `,
-        [titulo, dataInicio, dataFim, descricao, tipo, color || null, id, req.userId]
-      );
-
-      res.json({ message: "Evento atualizado!" });
-    } catch (err) {
-      console.error('Update event error with color, retrying without color if needed:', err.message || err);
-      if (err.code === '42703' || (err.message && err.message.toLowerCase().includes('column "color"'))) {
-        await pool.query(
-          `
-          UPDATE eventos
-          SET titulo=$1, dataInicio=$2, dataFim=$3, descricao=$4, tipo=$5
-          WHERE id=$6 AND userId=$7
-          `,
-          [titulo, dataInicio, dataFim, descricao, tipo, id, req.userId]
-        );
-        res.json({ message: "Evento atualizado!" });
-      } else {
-        throw err;
-      }
-    }
-  } catch (err) {
-    console.error("Update event error:", err);
-    res.status(500).json({ message: "Erro ao atualizar evento!" });
-  }
+const { title, description, start, end, color } = req.body;
+await pool.query(
+`UPDATE events SET title=$1,description=$2,start_date_time=$3,end_date_time=$4,color=$5
+WHERE id=$6 AND user_id=$7`,
+[title, description, start, end, color, req.params.id, req.userId]
+);
+res.json({ message: "Evento atualizado" });
 });
 
 
 app.delete("/events/:id", autenticarToken, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    await pool.query(
-      "DELETE FROM eventos WHERE id=$1 AND userId=$2",
-      [id, req.userId]
-    );
-
-    res.status(204).send();
-  } catch (err) {
-    console.error("Delete event error:", err);
-    res.status(500).json({ message: "Erro ao excluir evento!" });
-  }
+await pool.query("DELETE FROM events WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
+res.status(204).send();
 });
-
 
 
 
