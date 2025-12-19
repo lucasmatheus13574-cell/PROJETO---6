@@ -9,8 +9,9 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/calendar" element={<Calendario />} />
+        <Route path="/eventos" element={<Calendario />} />
       </Routes>
     </BrowserRouter>
   );

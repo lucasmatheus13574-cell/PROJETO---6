@@ -1,8 +1,8 @@
-const express = require ("express");
-const  cors =  require ("cors");
-const  bcryptjs = require ("bcryptjs");
-const  jwt = require ("jsonwebtoken");
-const  dotenv = require ("dotenv");
+const express = require("express");
+const cors = require("cors");
+const bcryptjs = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
 
 dotenv.config();
 
@@ -25,7 +25,7 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 
-const PORT =  process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
 
 
@@ -52,18 +52,6 @@ pool.query(
   )`
 );
 
-pool.query(
-  `CREATE TABLE IF NOT EXISTS eventos (
-      id SERIAL PRIMARY KEY,
-      userId INTEGER,
-      titulo TEXT,
-      start_date_time TEXT,
-      end_date_time TEXT,
-      description TEXT,
-      color TEXT,
-      FOREIGN KEY(userId) REFERENCES users(id)
-  )`
-);
 
 
 
@@ -74,7 +62,7 @@ pool.query("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS tipo TEXT");
 
 
 function autenticarToken(req, res, next) {
-  const authHeader = req.headers[ "authorization" ];
+  const authHeader = req.headers["authorization"];
   if (!authHeader) return res.status(401).json({ message: "Token ausente!" });
 
   const token = authHeader.split(" ")[1];
@@ -223,47 +211,6 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
       res.json({ message: "Tarefa removida!" });
     }
   );
-});
-
-
-
-
-
-
-app.get("/events", autenticarToken, async (req, res) => {
-const events = await pool.query("SELECT * FROM events WHERE user_id=$1", [req.userId]);
-res.json(events.rows);
-});
-
-
-app.post("/events", autenticarToken, async (req, res) => {
-const { title, description, start, end, color } = req.body;
-if (new Date(start) >= new Date(end)) return res.status(400).json({ message: "Datas inválidas" });
-
-
-const result = await pool.query(
-`INSERT INTO events (user_id,title,description,start_date_time,end_date_time,color)
-VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-[req.userId, title, description, start, end, color]
-);
-res.status(201).json(result.rows[0]);
-});
-
-
-app.put("/events/:id", autenticarToken, async (req, res) => {
-const { title, description, start, end, color } = req.body;
-await pool.query(
-`UPDATE events SET title=$1,description=$2,start_date_time=$3,end_date_time=$4,color=$5
-WHERE id=$6 AND user_id=$7`,
-[title, description, start, end, color, req.params.id, req.userId]
-);
-res.json({ message: "Evento atualizado" });
-});
-
-
-app.delete("/events/:id", autenticarToken, async (req, res) => {
-await pool.query("DELETE FROM events WHERE id=$1 AND user_id=$2", [req.params.id, req.userId]);
-res.status(204).send();
 });
 
 
