@@ -121,49 +121,35 @@ app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
 
 
 
-app.get("/eventos", autenticarToken, async (req, res) => {
+app.get(["/eventos", "/events"], autenticarToken, async (req, res) => {
     const userId = req.userId;
     const { start, end } = req.query;
 
-
-    const isValidDate = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(d);
-    const isDateOnly = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
-
-    if (start && !isValidDate(start)) return res.status(400).json({ message: "Parâmetro 'start' inválido. Use YYYY-MM-DD ou ISO 8601." });
-    if (end && !isValidDate(end)) return res.status(400).json({ message: "Parâmetro 'end' inválido. Use YYYY-MM-DD ou ISO 8601." });
-
     try {
-
-        let baseQuery = 'SELECT * FROM eventos WHERE userId = $1';
+        let query = `
+      SELECT *
+        FROM eventos
+        WHERE userId = $1
+    `;
         const params = [userId];
 
-        // convert date-only params to UTC day boundaries
-        let startParam = start;
-        let endParam = end;
-        if (start && isDateOnly(start)) startParam = `${start}T00:00:00Z`;
-        if (end && isDateOnly(end)) endParam = `${end}T23:59:59.999Z`;
-
-        if (startParam && endParam) {
-
-            params.push(startParam);
-            params.push(endParam);
-            baseQuery += ` AND NOT (end_date_time < $${params.length - 1}::timestamptz OR start_date_time > $${params.length}::timestamptz)`;
-        } else if (startParam) {
-
-            params.push(startParam);
-            baseQuery += ` AND end_date_time >= $${params.length}::timestamptz`;
-        } else if (endParam) {
-
-            params.push(endParam);
-            baseQuery += ` AND start_date_time <= $${params.length}::timestamptz`;
+        if (start) {
+            params.push(start);
+            query += ` AND end_date_time >= $${params.length}::timestamptz`;
         }
 
-        baseQuery += ' ORDER BY start_date_time';
+        if (end) {
+            params.push(end);
+            query += ` AND start_date_time <= $${params.length}::timestamptz`;
+        }
 
-        const result = await pool.query(baseQuery, params);
+        query += ` ORDER BY start_date_time`;
+
+        const result = await pool.query(query, params);
         res.status(200).json(result.rows);
+
     } catch (err) {
-        console.error(err);
+        console.error("ERRO GET /eventos:", err);
         res.status(500).json({ message: "Erro ao buscar eventos!" });
     }
 });
