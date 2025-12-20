@@ -40,7 +40,30 @@ pool.query(
     )`
 );
 
-// Attempt to convert existing text columns to timestamptz if needed (safe to run)
+pool.query(`
+  ALTER TABLE eventos
+  ADD COLUMN IF NOT EXISTS location TEXT
+`);
+
+pool.query(`
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = 'check_event_dates'
+    ) THEN
+      ALTER TABLE eventos
+      ADD CONSTRAINT check_event_dates
+      CHECK (start_date_time <= end_date_time);
+    END IF;
+  END $$;
+`);
+
+
+
+
+
 (async () => {
     try {
         await pool.query(`ALTER TABLE eventos ALTER COLUMN start_date_time TYPE TIMESTAMPTZ USING start_date_time::timestamptz`);
@@ -68,22 +91,34 @@ function autenticarToken(req, res, next) {
 
 
 
-app.post("/eventos", autenticarToken, async(req, res) => {
-    const { titulo, start_date_time, end_date_time, description, color } = req.body;
+app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
+    const { titulo, start_date_time, end_date_time, description, color, location } = req.body;
     const userId = req.userId;
+
+    if (!titulo || titulo.trim() === "") {
+        return res.status(400).json({ message: "Título é obrigatório" });
+    }
+
+    if (new Date(start_date_time) > new Date(end_date_time)) {
+        return res.status(400).json({ message: "Data final deve ser maior ou igual à inicial" });
+    }
 
     try {
         const result = await pool.query(
-            `INSERT INTO eventos (userId, titulo, start_date_time, end_date_time, description, color)
-            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [userId, titulo, start_date_time, end_date_time, description, color]
+            `INSERT INTO eventos 
+       (userId, titulo, start_date_time, end_date_time, description, color, location)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING *`,
+            [userId, titulo, start_date_time, end_date_time, description, color, location]
         );
+
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Erro ao criar evento!" });
+        res.status(500).json({ message: "Erro ao criar evento" });
     }
 });
+
 
 
 app.get("/eventos", autenticarToken, async (req, res) => {
@@ -152,26 +187,44 @@ app.get("/eventos/:id", autenticarToken, async (req, res) => {
         res.status(500).json({ message: "Erro ao buscar evento!" });
     }
 });
-
-app.put("/eventos/:id", autenticarToken, async (req, res) => {
+app.put(["/eventos/:id", "/events/:id"], autenticarToken, async (req, res) => {
+    const { titulo, start_date_time, end_date_time, description, color, location } = req.body;
+    const { id } = req.params;
     const userId = req.userId;
-    const eventoId = req.params.id;
-    const { titulo, start_date_time, end_date_time, description, color } = req.body;
+
+    if (!titulo || titulo.trim() === "") {
+        return res.status(400).json({ message: "Título é obrigatório" });
+    }
+
+    if (new Date(start_date_time) > new Date(end_date_time)) {
+        return res.status(400).json({ message: "Data final deve ser maior ou igual à inicial" });
+    }
+
     try {
         const result = await pool.query(
-            `UPDATE eventos SET titulo=$1, start_date_time=$2, end_date_time=$3, description=$4, color=$5
-            WHERE id=$6 AND userId=$7 RETURNING *`,
-            [titulo, start_date_time, end_date_time, description, color, eventoId, userId]
+            `UPDATE eventos SET
+        titulo=$1,
+        start_date_time=$2,
+        end_date_time=$3,
+        description=$4,
+        color=$5,
+        location=$6
+       WHERE id=$7 AND userId=$8
+       RETURNING *`,
+            [titulo, start_date_time, end_date_time, description, color, location, id, userId]
         );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Evento não encontrado!" });
+
+        if (!result.rows.length) {
+            return res.status(404).json({ message: "Evento não encontrado" });
         }
-        res.status(200).json(result.rows[0]);
+
+        res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Erro ao atualizar evento!" });
+        res.status(500).json({ message: "Erro ao atualizar evento" });
     }
 });
+
 
 app.delete("/eventos/:id", autenticarToken, async (req, res) => {
     const userId = req.userId;
@@ -180,7 +233,7 @@ app.delete("/eventos/:id", autenticarToken, async (req, res) => {
         const result = await pool.query(
             `DELETE FROM eventos WHERE id=$1 AND userId=$2 RETURNING *`,
             [eventoId, userId]
-        ); 
+        );
         if (result.rows.length === 0) {
             return res.status(404).json({ message: "Evento não encontrado!" });
         }

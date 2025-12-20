@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import moment from 'moment';
-import {Calendar , momentLocalizer} from 'react-big-calendar';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import '../styles/Calendario.css';
+import '../styles/Calendarios.css';
 import Swal from 'sweetalert2';
 
 
 import EventModal from './componentes/EventModal';
 
-const DragAndDropCalendar =  withDragAndDrop(Calendar);
-const localizer = momentLocalizer (moment);
+const DragAndDropCalendar = withDragAndDrop(Calendar);
+const localizer = momentLocalizer(moment);
 
 function Calendario() {
-    const URL_API  =  import.meta.env.VITE_API_URL;
+    const URL_API = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem("token");
 
     const [eventos, setEventos] = useState([]);
@@ -25,34 +25,54 @@ function Calendario() {
     const mapRowToEvent = (row) => ({
         id: row.id,
         title: row.titulo,
-        start: row.start_date_time ? moment.parseZone(row.start_date_time).toDate() : null,
-        end: row.end_date_time ? moment.parseZone(row.end_date_time).toDate() : null,
+        start: moment.parseZone(row.start_date_time).toDate(),
+        end: moment.parseZone(row.end_date_time).toDate(),
         description: row.description,
-        color: row.color || '#3788d8',
+        location: row.location,
+        color: row.color
     });
 
+
     const fetchEvents = useCallback(async (startDate, endDate) => {
-        if (!token) return;
+        if (!token) {
+            console.warn('Nenhum token encontrado; ignorando fetch de eventos.');
+            return;
+        }
+
+
+        if (!URL_API || !(URL_API.startsWith('http://') || URL_API.startsWith('https://'))) {
+            console.error('VITE_API_URL inválida ou sem protocolo:', URL_API);
+            Swal.fire('Erro', 'URL da API inválida. Verifique VITE_API_URL no arquivo de ambiente.', 'error');
+            return;
+        }
+
         try {
             const params = new URLSearchParams();
             if (startDate) params.append('start', startDate);
             if (endDate) params.append('end', endDate);
 
-            const res = await fetch(`${URL_API}/eventos?${params.toString()}`, {
+            const url = `${URL_API}/eventos?${params.toString()}`;
+            const res = await fetch(url, {
                 headers: { 'authorization': `Bearer ${token}` }
             });
 
-            if (!res.ok) throw new Error('Erro ao buscar eventos');
+            if (!res.ok) {
+                const bodyText = await res.text().catch(() => null);
+                console.error('Erro ao buscar eventos:', res.status, bodyText, url);
+                Swal.fire('Erro', `Erro ao buscar eventos (status ${res.status})`, 'error');
+                return;
+            }
+
             const data = await res.json();
             setEventos(data.map(mapRowToEvent));
         } catch (err) {
-            console.error(err);
+            console.error('Erro na requisição de eventos:', err);
             Swal.fire('Erro', 'Não foi possível carregar os eventos', 'error');
         }
     }, [URL_API, token]);
 
     useEffect(() => {
-        // carregar eventos do mês atual ao abrir (UTC day bounds)
+
         const start = moment().utc().startOf('month').toISOString();
         const end = moment().utc().endOf('month').toISOString();
         rangeRef.current = { start, end };
@@ -63,7 +83,7 @@ function Calendario() {
         let start, end;
         if (Array.isArray(range)) {
             start = moment(range[0]).utc().startOf('day').toISOString();
-            end = moment(range[range.length -1]).utc().endOf('day').toISOString();
+            end = moment(range[range.length - 1]).utc().endOf('day').toISOString();
         } else if (range.start && range.end) {
             start = moment(range.start).utc().startOf('day').toISOString();
             end = moment(range.end).utc().endOf('day').toISOString();
@@ -75,7 +95,7 @@ function Calendario() {
         fetchEvents(start, end);
     };
 
-    const openCreateModal = ({start, end}) => {
+    const openCreateModal = ({ start, end }) => {
         setEventoSelecionado({
             mode: 'create',
             start,
@@ -91,7 +111,7 @@ function Calendario() {
     }
 
     const handleEventClose = () => {
-        setEventoSelecionado (null);
+        setEventoSelecionado(null);
     }
 
     const createEvent = async (payload) => {
@@ -182,6 +202,17 @@ function Calendario() {
         style: { backgroundColor: event.color || '#3788d8', borderRadius: '4px', color: 'white' }
     });
 
+    const EventTooltip = ({ event }) => (
+        <div>
+            <strong>{event.title}</strong>
+            {event.location && <div>{event.location}</div>}
+            <div>
+                {moment(event.start).format('HH:mm')} - {moment(event.end).format('HH:mm')}
+            </div>
+        </div>
+    );
+
+
 
     return (
         <div>
@@ -198,6 +229,7 @@ function Calendario() {
                 selectable
                 onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
                 eventPropGetter={eventPropGetter}
+                components={{ event: EventTooltip }}
                 className="calendar"
             />
 

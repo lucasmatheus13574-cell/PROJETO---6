@@ -1,13 +1,13 @@
-import React, {useState ,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import Swal from 'sweetalert2';
 
 const EventModal = ({ evento, onClose, onSave, onDelete }) => {
-    if (!evento) return null;
+    const safeEvento = evento || {};
+    const { title, titulo: altTitulo, description: desc, start: startVal, start_date_time, end: endVal, end_date_time, color: colorVal, mode } = safeEvento;
+    const isCreate = mode === 'create';
 
-    const isCreate = evento.mode === 'create';
 
-    
     const toLocalInput = (val) => {
         if (!val) return moment().local().format('YYYY-MM-DDTHH:mm');
         if (moment.isMoment(val)) return val.local().format('YYYY-MM-DDTHH:mm');
@@ -18,20 +18,22 @@ const EventModal = ({ evento, onClose, onSave, onDelete }) => {
 
     const toUTCISOString = (localDateTimeStr) => moment(localDateTimeStr).utc().toISOString();
 
-    const [titulo, setTitulo] = useState(evento.title || evento.titulo || '');
-    const [description, setDescription] = useState(evento.description || '');
-    const [start, setStart] = useState(toLocalInput(evento.start || evento.start_date_time || new Date()));
-    const [end, setEnd] = useState(toLocalInput(evento.end || evento.end_date_time || evento.start || evento.start_date_time || new Date()));
-    const [color, setColor] = useState(evento.color || '#3788d8');
+    const [titulo, setTitulo] = useState(title || altTitulo || '');
+    const [description, setDescription] = useState(desc || '');
+    const [start, setStart] = useState(toLocalInput(startVal || start_date_time || new Date()));
+    const [end, setEnd] = useState(toLocalInput(endVal || end_date_time || startVal || start_date_time || new Date()));
+    const [color, setColor] = useState(colorVal || '#3788d8');
+    const [location, setLocation] = useState(safeEvento.location || '');
+    const [loading] = useState(false);
+
 
     useEffect(() => {
-        
-        setTitulo(evento.title || evento.titulo || '');
-        setDescription(evento.description || '');
-        setStart(toLocalInput(evento.start || evento.start_date_time || new Date()));
-        setEnd(toLocalInput(evento.end || evento.end_date_time || evento.start || evento.start_date_time || new Date()));
-        setColor(evento.color || '#3788d8');
-    }, [evento]);
+        setTitulo(title || altTitulo || '');
+        setDescription(desc || '');
+        setStart(toLocalInput(startVal || start_date_time || new Date()));
+        setEnd(toLocalInput(endVal || end_date_time || startVal || start_date_time || new Date()));
+        setColor(colorVal || '#3788d8');
+    }, [title, altTitulo, desc, startVal, start_date_time, endVal, end_date_time, colorVal]);
 
     const handleSave = async () => {
         if (!onSave) {
@@ -62,8 +64,10 @@ const EventModal = ({ evento, onClose, onSave, onDelete }) => {
             start_date_time: toUTCISOString(start),
             end_date_time: toUTCISOString(end),
             description,
-            color
+            color,
+            location
         };
+
 
         try {
             const result = await onSave(payload);
@@ -130,11 +134,24 @@ const EventModal = ({ evento, onClose, onSave, onDelete }) => {
                 <label>Cor</label>
                 <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
 
+                <label>Local</label>
+                <input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Ex: Sala 3, Online, Auditório"
+                />
+
+
                 <div style={{ marginTop: 12 }}>
                     <button onClick={handleSave}>{isCreate ? 'Criar' : 'Salvar'}</button>
                     {!isCreate && onDelete && <button onClick={handleDelete} style={{ marginLeft: 8 }}>Deletar</button>}
                     <button onClick={onClose} style={{ marginLeft: 8 }}>Fechar</button>
                 </div>
+
+                <button onClick={handleSave} disabled={loading}>
+                    {loading ? 'Salvando...' : isCreate ? 'Criar' : 'Salvar'}
+                </button>
+
             </div>
         </div>
     );
