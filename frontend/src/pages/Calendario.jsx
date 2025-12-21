@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import moment from 'moment';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -7,7 +7,7 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import '../styles/Calendarios.css';
 import Swal from 'sweetalert2';
-
+import { FilterContext } from '../context/FilterContext';
 
 import EventModal from './componentes/EventModal';
 
@@ -21,15 +21,18 @@ function Calendario() {
     const [eventos, setEventos] = useState([]);
     const [eventoSelecionado, setEventoSelecionado] = useState(null);
     const rangeRef = useRef({ start: null, end: null });
+    const { showEvents, showTasks } = useContext(FilterContext);
 
     const mapRowToEvent = (row) => ({
         id: row.id,
-        title: row.titulo,
-        start: moment.parseZone(row.start_date_time).toDate(),
-        end: moment.parseZone(row.end_date_time).toDate(),
-        description: row.description,
-        location: row.location,
-        color: row.color
+        title: row.titulo || row.tarefa,
+        start: row.start_date_time ? moment.parseZone(row.start_date_time).toDate() : (row.data ? moment(row.data).startOf('day').toDate() : new Date()),
+        end: row.end_date_time ? moment.parseZone(row.end_date_time).toDate() : (row.data ? moment(row.data).endOf('day').toDate() : new Date()),
+        description: row.description || '',
+        location: row.location || '',
+        color: row.color || '#3788d8',
+        tipo: row.tarefa ? 'tarefa' : 'evento',
+        prioridade: row.prioridade
     });
 
 
@@ -39,7 +42,6 @@ function Calendario() {
             return;
         }
 
-
         if (!URL_API || !(URL_API.startsWith('http://') || URL_API.startsWith('https://'))) {
             console.error('VITE_API_URL inválida ou sem protocolo:', URL_API);
             Swal.fire('Erro', 'URL da API inválida. Verifique VITE_API_URL no arquivo de ambiente.', 'error');
@@ -47,37 +49,58 @@ function Calendario() {
         }
 
         try {
+            // fetch eventos
             const params = new URLSearchParams();
             if (startDate) params.append('start', startDate);
             if (endDate) params.append('end', endDate);
 
-            const url = `${URL_API}/eventos?${params.toString()}`;
-            const res = await fetch(url, {
-                headers: { 'authorization': `Bearer ${token}` }
-            });
+            const urlEvents = `${URL_API}/eventos?${params.toString()}`;
+            const resEvents = await fetch(urlEvents, { headers: { 'authorization': `Bearer ${token}` } });
+            if (!resEvents.ok) throw new Error('Erro ao buscar eventos');
+            const eventsData = await resEvents.json();
 
-            if (!res.ok) {
-                const bodyText = await res.text().catch(() => null);
-                console.error('Erro ao buscar eventos:', res.status, bodyText, url);
-                Swal.fire('Erro', `Erro ao buscar eventos (status ${res.status})`, 'error');
-                return;
-            }
+            // fetch tarefas (no filtro por data no backend; we'll filter client-side)
+            const resTasks = await fetch(`${URL_API}/tarefas`, { headers: { 'authorization': `Bearer ${token}` } });
+            if (!resTasks.ok) throw new Error('Erro ao buscar tarefas');
+            const tasksData = await resTasks.json();
 
-            const data = await res.json();
-            setEventos(data.map(mapRowToEvent));
+            const mappedEvents = eventsData.map(mapRowToEvent);
+            const mappedTasks = tasksData.map((t) => ({
+                id: t.id,
+                title: t.tarefa,
+                start: t.data ? moment(t.data).startOf('day').toDate() : new Date(),
+                end: t.data ? moment(t.data).endOf('day').toDate() : new Date(),
+                description: '',
+                color: '#0d6efd',
+                tipo: 'tarefa',
+                prioridade: t.prioridade,
+                raw: t
+            }));
+
+            // Merge based on filters
+            let combined = [];
+            if (showEvents) combined = combined.concat(mappedEvents);
+            if (showTasks) combined = combined.concat(mappedTasks);
+
+            setEventos(combined);
         } catch (err) {
-            console.error('Erro na requisição de eventos:', err);
-            Swal.fire('Erro', 'Não foi possível carregar os eventos', 'error');
+            console.error('Erro na requisição de eventos/tarefas:', err);
+            Swal.fire('Erro', 'Não foi possível carregar os itens', 'error');
         }
-    }, [URL_API, token]);
+    }, [URL_API, token, showEvents, showTasks]);
 
     useEffect(() => {
-
         const start = moment().utc().startOf('month').toISOString();
         const end = moment().utc().endOf('month').toISOString();
         rangeRef.current = { start, end };
         fetchEvents(start, end);
     }, [fetchEvents]);
+
+    useEffect(() => {
+        // refetch when filters change
+        const { start, end } = rangeRef.current;
+        fetchEvents(start, end);
+    }, [showEvents, showTasks, fetchEvents]);
 
     const handleRangeChange = (range) => {
         let start, end;
@@ -98,6 +121,7 @@ function Calendario() {
     const openCreateModal = ({ start, end }) => {
         setEventoSelecionado({
             mode: 'create',
+            tipo: 'evento',
             start,
             end,
             titulo: '',
@@ -107,6 +131,7 @@ function Calendario() {
     };
 
     const handleEventClick = (event) => {
+        // when clicking a tarefa, event will have tipo 'tarefa'
         setEventoSelecionado({ mode: 'edit', ...event });
     }
 
@@ -114,88 +139,135 @@ function Calendario() {
         setEventoSelecionado(null);
     }
 
-    const createEvent = async (payload) => {
+    const createItem = async (payload, tipo) => {
         try {
-            // ensure payload timestamps are UTC ISO
-            payload.start_date_time = moment(payload.start_date_time).utc().toISOString();
-            payload.end_date_time = moment(payload.end_date_time).utc().toISOString();
+            if (tipo === 'evento') {
+                // ensure payload timestamps are UTC ISO
+                payload.start_date_time = moment(payload.start_date_time).utc().toISOString();
+                payload.end_date_time = moment(payload.end_date_time).utc().toISOString();
 
-            const res = await fetch(`${URL_API}/eventos`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-            if (!res.ok) throw new Error('Erro ao criar evento');
-            const data = await res.json();
-            Swal.fire('Criado', 'Evento criado com sucesso', 'success');
-            // atualizar lista
-            fetchEvents(rangeRef.current.start, rangeRef.current.end);
-            setEventoSelecionado(null);
-            return data;
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Erro', 'Não foi possível criar o evento', 'error');
-        }
-    };
+                const res = await fetch(`${URL_API}/eventos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Erro ao criar evento');
+                await res.json();
+                Swal.fire('Criado', 'Evento criado com sucesso', 'success');
+            } else {
+                const res = await fetch(`${URL_API}/tarefas`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Erro ao criar tarefa');
+                await res.json();
+                Swal.fire('Criado', 'Tarefa criada com sucesso', 'success');
+            }
 
-    const updateEvent = async (id, payload) => {
-        try {
-            // ensure payload timestamps are UTC ISO
-            payload.start_date_time = moment(payload.start_date_time).utc().toISOString();
-            payload.end_date_time = moment(payload.end_date_time).utc().toISOString();
-
-            const res = await fetch(`${URL_API}/eventos/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-            if (!res.ok) throw new Error('Erro ao atualizar evento');
-            const data = await res.json();
-            Swal.fire('Atualizado', 'Evento atualizado com sucesso', 'success');
-            fetchEvents(rangeRef.current.start, rangeRef.current.end);
-            setEventoSelecionado(null);
-            return data;
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Erro', 'Não foi possível atualizar o evento', 'error');
-        }
-    };
-
-    const deleteEvent = async (id) => {
-        try {
-            const res = await fetch(`${URL_API}/eventos/${id}`, {
-                method: 'DELETE',
-                headers: { 'authorization': `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error('Erro ao deletar evento');
-            Swal.fire('Deletado', 'Evento deletado com sucesso', 'success');
             fetchEvents(rangeRef.current.start, rangeRef.current.end);
             setEventoSelecionado(null);
             return true;
         } catch (err) {
             console.error(err);
-            Swal.fire('Erro', 'Não foi possível deletar o evento', 'error');
+            Swal.fire('Erro', 'Não foi possível criar o item', 'error');
+            return false;
+        }
+    };
+
+    const updateItem = async (id, payload, tipo) => {
+        try {
+            if (tipo === 'evento') {
+                payload.start_date_time = moment(payload.start_date_time).utc().toISOString();
+                payload.end_date_time = moment(payload.end_date_time).utc().toISOString();
+
+                const res = await fetch(`${URL_API}/eventos/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Erro ao atualizar evento');
+                Swal.fire('Atualizado', 'Evento atualizado com sucesso', 'success');
+            } else {
+                const res = await fetch(`${URL_API}/tarefas/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Erro ao atualizar tarefa');
+                Swal.fire('Atualizado', 'Tarefa atualizada com sucesso', 'success');
+            }
+
+            fetchEvents(rangeRef.current.start, rangeRef.current.end);
+            setEventoSelecionado(null);
+            return true;
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Erro', 'Não foi possível atualizar o item', 'error');
+            return false;
+        }
+    };
+
+    const deleteItem = async (id, tipo) => {
+        try {
+            if (tipo === 'evento') {
+                const res = await fetch(`${URL_API}/eventos/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Erro ao deletar evento');
+                Swal.fire('Deletado', 'Evento deletado com sucesso', 'success');
+            } else {
+                const res = await fetch(`${URL_API}/tarefas/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Erro ao deletar tarefa');
+                Swal.fire('Deletado', 'Tarefa deletada com sucesso', 'success');
+            }
+
+            fetchEvents(rangeRef.current.start, rangeRef.current.end);
+            setEventoSelecionado(null);
+            return true;
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Erro', 'Não foi possível deletar o item', 'error');
             return false;
         }
     };
 
     const MoverEvent = async (data) => {
         const { event, start, end } = data;
-        // enviar atualização para a API (UTC)
-        const payload = {
-            titulo: event.title,
-            start_date_time: moment(start).utc().toISOString(),
-            end_date_time: moment(end).utc().toISOString(),
-            description: event.description || '',
-            color: event.color || '#3788d8'
-        };
-        await updateEvent(event.id, payload);
+        if (event.tipo === 'tarefa') {
+            // Update tarefa - change date
+            const payload = {
+                tarefa: event.title,
+                data: moment(start).format('YYYY-MM-DD'),
+                prioridade: event.prioridade || 'baixa'
+            };
+            await updateItem(event.id, payload, 'tarefa');
+        } else {
+            const payload = {
+                titulo: event.title,
+                start_date_time: moment(start).utc().toISOString(),
+                end_date_time: moment(end).utc().toISOString(),
+                description: event.description || '',
+                color: event.color || '#3788d8'
+            };
+            await updateItem(event.id, payload, 'evento');
+        }
     };
 
     const eventPropGetter = (event) => ({
@@ -215,30 +287,32 @@ function Calendario() {
 
 
     return (
-        <div>
-            <DragAndDropCalendar
-                defaultDate={moment().toDate()}
-                defaultView="month"
-                events={eventos}
-                localizer={localizer}
-                resizable
-                onEventDrop={MoverEvent}
-                onEventResize={MoverEvent}
-                onSelectEvent={handleEventClick}
-                onRangeChange={handleRangeChange}
-                selectable
-                onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
-                eventPropGetter={eventPropGetter}
-                components={{ event: EventTooltip }}
-                className="calendar"
-            />
+        <div className="calendar-page">
+            <div className="calendar-container">
+                <DragAndDropCalendar
+                    defaultDate={moment().toDate()}
+                    defaultView="month"
+                    events={eventos}
+                    localizer={localizer}
+                    resizable
+                    onEventDrop={MoverEvent}
+                    onEventResize={MoverEvent}
+                    onSelectEvent={handleEventClick}
+                    onRangeChange={handleRangeChange}
+                    selectable
+                    onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
+                    eventPropGetter={eventPropGetter}
+                    components={{ event: EventTooltip }}
+                    className="calendar"
+                />
+            </div>
 
             {eventoSelecionado && (
                 <EventModal
                     evento={eventoSelecionado}
                     onClose={handleEventClose}
-                    onSave={eventoSelecionado.mode === 'create' ? createEvent : (payload) => updateEvent(eventoSelecionado.id, payload)}
-                    onDelete={eventoSelecionado.mode === 'edit' ? () => deleteEvent(eventoSelecionado.id) : null}
+                    onSave={eventoSelecionado.mode === 'create' ? createItem : (payload, tipo, id) => updateItem(id || eventoSelecionado.id, payload, tipo || eventoSelecionado.tipo)}
+                    onDelete={eventoSelecionado.mode === 'edit' ? (id, tipo) => deleteItem(id || eventoSelecionado.id, tipo || eventoSelecionado.tipo) : null}
                 />
             )}
         </div>

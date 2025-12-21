@@ -191,7 +191,7 @@ app.put(["/eventos/:id", "/events/:id"], autenticarToken, async (req, res) => {
         description=$4,
         color=$5,
         location=$6
-       WHERE id=$7 AND userId=$8
+        WHERE id=$7 AND userId=$8
        RETURNING *`,
             [titulo, start_date_time, end_date_time, description, color, location, id, userId]
         );

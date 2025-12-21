@@ -1,0 +1,35 @@
+.agenda-container {
+    padding: 16px;
+}
+
+.agenda-toggle {
+    display: inline-flex;
+    background: #1f1f1f;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 16px;
+}
+
+.agenda-toggle button {
+    border: none;
+    background: transparent;
+    color: #bbb;
+    padding: 8px 18px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.agenda-toggle button.active {
+    background: #1976d2;
+    color: white;
+}
+
+.agenda-toggle button:hover {
+    color: white;
+}
+
+.agenda-content {
+    margin-top: 16px;
+}
