@@ -45,20 +45,7 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS location TEXT
 `);
 
-pool.query(`
-    DO $$
-    BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'check_event_dates'
-    ) THEN
-        ALTER TABLE eventos
-        ADD CONSTRAINT check_event_dates
-        CHECK (start_date_time <= end_date_time);
-    END IF;
-    END $$;
-`);
+
 
 
 
