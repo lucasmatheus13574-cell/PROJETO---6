@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import Swal from 'sweetalert2';
 
-const EventModal = ({ evento, onClose, onSave, onDelete }) => {
+const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
     const safeEvento = evento || {};
     const { title, titulo: altTitulo, description: desc, start: startVal, start_date_time, end: endVal, end_date_time, color: colorVal, mode, tipo: tipoVal, id } = safeEvento;
     const isCreate = mode === 'create';
@@ -132,6 +132,36 @@ const EventModal = ({ evento, onClose, onSave, onDelete }) => {
             }
         }
     };
+
+    const handleConclude = async () => {
+        if (!onConclude) {
+            Swal.fire('Erro', 'Ação de concluir não está disponível', 'error');
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: 'Concluir tarefa?',
+            text: 'Deseja marcar esta tarefa como concluída?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, concluir',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const r = await onConclude(id, tipo);
+                if (r === false) {
+                    Swal.fire('Erro', 'Não foi possível concluir', 'error');
+                    return;
+                }
+                onClose && onClose();
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Erro', 'Não foi possível concluir', 'error');
+            }
+        }
+    };
     return (
         <div className="event-modal-overlay">
             <div className="event-modal">
@@ -179,10 +209,10 @@ const EventModal = ({ evento, onClose, onSave, onDelete }) => {
                             </div>
                         </div>
                     ) : (
-                        <div className="event-row">
+                        <div className="priority-field">
                             <div>
                                 <label>Prioridade</label>
-                                <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+                                <select className='priority-select' value={priority} onChange={(e) => setPriority(e.target.value)}>
                                     <option value="baixa">Baixa</option>
                                     <option value="media">Média</option>
                                     <option value="alta">Alta</option>
@@ -196,6 +226,12 @@ const EventModal = ({ evento, onClose, onSave, onDelete }) => {
                     <button className="btn-primary" onClick={handleSave} disabled={loading}>
                         {loading ? 'Salvando...' : isCreate ? 'Criar' : 'Salvar'}
                     </button>
+
+                    {/* show conclude only for tarefa and in edit mode */}
+                    {!isCreate && tipo === 'tarefa' && onConclude && !safeEvento.concluida && (
+                        <button className="btn-secondary" onClick={handleConclude} style={{ marginLeft: 8 }}>Concluir tarefa</button>
+                    )}
+
                     {!isCreate && onDelete && <button className="btn-danger" onClick={handleDelete} style={{ marginLeft: 8 }}>Deletar</button>}
                     <button className="btn-secondary" onClick={onClose} style={{ marginLeft: 8 }}>Fechar</button>
                 </div>

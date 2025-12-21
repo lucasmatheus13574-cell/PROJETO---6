@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import moment from 'moment';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
+import 'moment/locale/pt-br';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -9,7 +10,22 @@ import '../styles/Calendarios.css';
 import Swal from 'sweetalert2';
 import { FilterContext } from '../context/FilterContext';
 
+
+import CustomToolbar from './componentes/CustomToobar';
 import EventModal from './componentes/EventModal';
+import CalendarYearView from './componentes/CalendarYearView';
+import '../styles/CalendarYear.css';
+
+moment.locale('pt-br');
+
+const CustomWeekdayHeader = ({ date, localizer }) => {
+    return (
+        <span>
+            {localizer.format(date, 'dddd', 'pt-br')}
+        </span>
+    );
+};
+
 
 const DragAndDropCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -20,8 +36,36 @@ function Calendario() {
 
     const [eventos, setEventos] = useState([]);
     const [eventoSelecionado, setEventoSelecionado] = useState(null);
+    const [showYearView, setShowYearView] = useState(false);
+    const [year, setYear] = useState(moment().year());
+    const [currentDate, setCurrentDate] = useState(moment().toDate());
     const rangeRef = useRef({ start: null, end: null });
     const { showEvents, showTasks } = useContext(FilterContext);
+
+
+    const messages = {
+        allDay: 'Dia inteiro',
+        previous: 'Anterior',
+        next: 'Próximo',
+        today: 'Hoje',
+        month: 'Mês',
+        week: 'Semana',
+        work_week: 'Semana útil',
+        day: 'Dia',
+        agenda: 'Agenda',
+        date: 'Data',
+        time: 'Hora',
+        event: 'Evento',
+        noEventsInRange: 'Nenhum evento neste período',
+        showMore: total => `+ Ver mais (${total})`,
+    };
+
+
+    const formats = {
+        weekdayFormat: (date, culture, localizer) =>
+            localizer.format(date, 'ddd', culture),
+    };
+
 
     const mapRowToEvent = (row) => ({
         id: row.id,
@@ -74,6 +118,7 @@ function Calendario() {
                 color: '#0d6efd',
                 tipo: 'tarefa',
                 prioridade: t.prioridade,
+                concluida: t.concluida,
                 raw: t
             }));
 
@@ -128,6 +173,21 @@ function Calendario() {
             description: '',
             color: '#3788d8'
         });
+    };
+
+    const toggleYearView = () => setShowYearView((s) => !s);
+    const prevYear = () => setYear((y) => y - 1);
+    const nextYear = () => setYear((y) => y + 1);
+    const selectMonth = (monthIndex) => {
+        // Set calendar to first day of selected month and close year view
+        const d = moment({ year, month: monthIndex, day: 1 }).toDate();
+        setCurrentDate(d);
+        setShowYearView(false);
+        // update fetched range to that month
+        const start = moment(d).utc().startOf('month').toISOString();
+        const end = moment(d).utc().endOf('month').toISOString();
+        rangeRef.current = { start, end };
+        fetchEvents(start, end);
     };
 
     const handleEventClick = (event) => {
@@ -248,6 +308,26 @@ function Calendario() {
         }
     };
 
+    const concludeItem = async (id, tipo) => {
+        if (tipo !== 'tarefa') return false;
+        try {
+            const res = await fetch(`${URL_API}/tarefas/concluir/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Erro ao concluir tarefa');
+            await res.json();
+            Swal.fire('Concluído', 'Tarefa marcada como concluída', 'success');
+            fetchEvents(rangeRef.current.start, rangeRef.current.end);
+            setEventoSelecionado(null);
+            return true;
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Erro', 'Não foi possível concluir a tarefa', 'error');
+            return false;
+        }
+    };
+
     const MoverEvent = async (data) => {
         const { event, start, end } = data;
         if (event.tipo === 'tarefa') {
@@ -270,9 +350,15 @@ function Calendario() {
         }
     };
 
-    const eventPropGetter = (event) => ({
-        style: { backgroundColor: event.color || '#3788d8', borderRadius: '4px', color: 'white' }
-    });
+    const eventPropGetter = (event) => {
+        const isTask = event.tipo === 'tarefa';
+        const isConcluded = event.concluida === 1 || (event.raw && event.raw.concluida === 1);
+        const background = isTask ? (isConcluded ? '#83b5ff' : (event.color || '#0d6efd')) : (event.color || '#3788d8');
+        const style = { backgroundColor: background, borderRadius: '4px', color: 'white' };
+        if (isConcluded) style.opacity = 0.7;
+        if (isTask && isConcluded) style.textDecoration = 'line-through';
+        return { style };
+    };
 
     const EventTooltip = ({ event }) => (
         <div>
@@ -285,26 +371,90 @@ function Calendario() {
     );
 
 
+    const logout = () => {
+        Swal.fire({
+            title: "Deseja sair?",
+            text: "Você será desconectado da sua conta!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sim, sair",
+            cancelButtonText: "Cancelar"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                localStorage.removeItem("token");
+                Swal.fire({
+                    icon: "success",
+                    title: "Sessão encerrada!",
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = "/";
+                });
+            }
+        });
+    };
+
+
+
 
     return (
+
+
+
+
         <div className="calendar-page">
+
+
             <div className="calendar-container">
-                <DragAndDropCalendar
-                    defaultDate={moment().toDate()}
-                    defaultView="month"
-                    events={eventos}
-                    localizer={localizer}
-                    resizable
-                    onEventDrop={MoverEvent}
-                    onEventResize={MoverEvent}
-                    onSelectEvent={handleEventClick}
-                    onRangeChange={handleRangeChange}
-                    selectable
-                    onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
-                    eventPropGetter={eventPropGetter}
-                    components={{ event: EventTooltip }}
-                    className="calendar"
-                />
+                <div className="calendar-topbar" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    <button className="btn-secondary" onClick={() => { const s = moment().utc().startOf('month').toISOString(); const e = moment().utc().endOf('month').toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); setCurrentDate(moment().toDate()); }}>
+                        Hoje
+                    </button>
+                    <button className="btn-secondary" onClick={() => toggleYearView()}>
+                        Ano
+                    </button>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                        <button className="btn-secondary" onClick={() => { const prev = moment(currentDate).subtract(1, 'months').toDate(); setCurrentDate(prev); handleRangeChange({ start: prev, end: prev }); }}>&lt; Anterior</button>
+                        <button className="btn-secondary" onClick={() => { const next = moment(currentDate).add(1, 'months').toDate(); setCurrentDate(next); handleRangeChange({ start: next, end: next }); }}>Proximo &gt;</button>
+                        <button className="logout-btn" onClick={logout}>🚪 Logout</button>
+                    </div>
+                </div>
+
+
+                {showYearView ? (
+                    <CalendarYearView
+                        year={year}
+                        onPrevYear={prevYear}
+                        onNextYear={nextYear}
+                        onSelectMonth={selectMonth}
+                        onClose={() => setShowYearView(false)}
+                    />
+                ) : (
+                    <DragAndDropCalendar
+                        date={currentDate}
+                        defaultView="month"
+                        views={['month', 'week', 'day']}
+                        events={eventos}
+                        localizer={localizer}
+                        culture="pt-br"
+                        messages={messages}
+                        formats={formats}
+                        resizable
+                        onEventDrop={MoverEvent}
+                        onEventResize={MoverEvent}
+                        onSelectEvent={handleEventClick}
+                        onRangeChange={handleRangeChange}
+                        selectable
+                        onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
+                        eventPropGetter={eventPropGetter}
+                        components={{
+                            month: { header: CustomWeekdayHeader },
+                            toolbar: CustomToolbar,
+                            event: EventTooltip
+                        }}
+                        className="calendar"
+                    />
+                )}
             </div>
 
             {eventoSelecionado && (
@@ -313,6 +463,7 @@ function Calendario() {
                     onClose={handleEventClose}
                     onSave={eventoSelecionado.mode === 'create' ? createItem : (payload, tipo, id) => updateItem(id || eventoSelecionado.id, payload, tipo || eventoSelecionado.tipo)}
                     onDelete={eventoSelecionado.mode === 'edit' ? (id, tipo) => deleteItem(id || eventoSelecionado.id, tipo || eventoSelecionado.tipo) : null}
+                    onConclude={eventoSelecionado.mode === 'edit' ? (id, tipo) => concludeItem(id || eventoSelecionado.id, tipo || eventoSelecionado.tipo) : null}
                 />
             )}
         </div>

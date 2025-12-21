@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/login";
 import Register from "./pages/register";
 import Calendario from "./pages/Calendario";
-
+import MainLayout from "./pages/componentes/MainLoyaut";
 
 export default function App() {
   return (
@@ -11,7 +11,11 @@ export default function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/eventos" element={<Calendario />} />
+
+        <Route element={<MainLayout />}>
+          <Route path="/eventos" element={<Calendario />} />
+          <Route path="/agenda" element={<Calendario />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

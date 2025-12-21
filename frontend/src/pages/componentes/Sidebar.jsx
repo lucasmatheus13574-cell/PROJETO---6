@@ -12,21 +12,13 @@ function Sidebar() {
             <div className="sidebar-header">
                 <h2 className="sidebar-logo">Meu App</h2>
                 <button className="sidebar-toggle" onClick={() => setOpen(!open)} aria-label="Toggle sidebar">
-                    {open ? '◀' : '▶'}
+                    {open ? '◀' : '☰'}
                 </button>
             </div>
 
             <nav className="sidebar-menu">
-                <NavLink to="/agenda" className="sidebar-link">
+                <NavLink to="/eventos" className="sidebar-link">
                     Agenda
-                </NavLink>
-
-                <NavLink to="/livros" className="sidebar-link">
-                    Livros
-                </NavLink>
-
-                <NavLink to="/perfil" className="sidebar-link">
-                    Perfil
                 </NavLink>
             </nav>
 

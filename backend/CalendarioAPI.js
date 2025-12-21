@@ -108,6 +108,9 @@ app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
     if (!titulo || titulo.trim() === "") {
         return res.status(400).json({ message: "Título é obrigatório" });
     }
+    if (!titulo || start_date_time === "" || end_date_time === "" || description === "") {
+        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+    }
 
     if (new Date(start_date_time) > new Date(end_date_time)) {
         return res.status(400).json({ message: "Data final deve ser maior ou igual à inicial" });
