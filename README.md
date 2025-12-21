@@ -1,7 +1,7 @@
 1. Título do Projeto: AdaptaTasks - Gerenciador de Tarefas
 
 
-2.AdaptaTasks - Ela gerencia tarefas podendo como adicionar ela (remover,editar,marcar como concluída) feita com Node.js ,React
+2.AdaptaTasks - Ela gerencia tarefas e eventos podendo como adicionar ela (remover,editar,marcar como concluída) feita com Node.js ,React
 
 3.Linguagens Usadas/Ferramentas:
 Frontend: React, JavaScript, HTML, CSS, Axios (para requisições API).
@@ -27,9 +27,9 @@ NPM (versão 22.21.1 ou superior)
 
 6. "Como Configurar e Rodar o Projeto": Por favor, adicione os passos detalhados para:
 - Clonar o repositório.
--Instalar as dependências do backend (bcryptjs , jsonwebtoken , cors , sqlite3 , express).
+-Instalar as dependências do backend (bcryptjs , jsonwebtoken , cors , PostreSQL , express).
 -Iniciar o servidor backend (cd backend , node server.js , PORT: 3000).
--Instalar as dependências do frontend-react (cd frontend ,npm install react-router-dom ,npm install axios, npm install , npm init -y,npm install  react-dom , npm install sweetalert2  )
+-Instalar as dependências do frontend-react (cd frontend ,npm install react-router-dom ,npm install axios, npm install , npm init -y,npm install  react-dom , npm install sweetalert2, npm install --save react-big-calendar )
 -Iniciar a aplicação frontend-react (cd frontend , npm run dev , 5173).
 
 
