@@ -41,23 +41,23 @@ pool.query(
 );
 
 pool.query(`
-  ALTER TABLE eventos
-  ADD COLUMN IF NOT EXISTS location TEXT
+    ALTER TABLE eventos
+    ADD COLUMN IF NOT EXISTS location TEXT
 `);
 
 pool.query(`
-  DO $$
-  BEGIN
+    DO $$
+    BEGIN
     IF NOT EXISTS (
-      SELECT 1
-      FROM pg_constraint
-      WHERE conname = 'check_event_dates'
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'check_event_dates'
     ) THEN
-      ALTER TABLE eventos
-      ADD CONSTRAINT check_event_dates
-      CHECK (start_date_time <= end_date_time);
+        ALTER TABLE eventos
+        ADD CONSTRAINT check_event_dates
+        CHECK (start_date_time <= end_date_time);
     END IF;
-  END $$;
+    END $$;
 `);
 
 
@@ -106,8 +106,8 @@ app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
     try {
         const result = await pool.query(
             `INSERT INTO eventos 
-       (userId, titulo, start_date_time, end_date_time, description, color, location)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+        (userId, titulo, start_date_time, end_date_time, description, color, location)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
        RETURNING *`,
             [userId, titulo, start_date_time, end_date_time, description, color, location]
         );
@@ -121,39 +121,23 @@ app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
 
 
 
-app.get(["/eventos", "/events"], autenticarToken, async (req, res) => {
+app.get("/eventos", autenticarToken, async (req, res) => {
     const userId = req.userId;
-    const { start, end } = req.query;
+    const { start , end } = req.query;
 
     try {
-        let query = `
-      SELECT *
-        FROM eventos
-        WHERE userId = $1
-    `;
-        const params = [userId];
-
-        if (start) {
-            params.push(start);
-            query += ` AND end_date_time >= $${params.length}::timestamptz`;
-        }
-
-        if (end) {
-            params.push(end);
-            query += ` AND start_date_time <= $${params.length}::timestamptz`;
-        }
-
-        query += ` ORDER BY start_date_time`;
-
-        const result = await pool.query(query, params);
+        const result  = await pool.query(
+            `SELECT * FROM eventos WHERE userId = $1 AND 
+        start_date_time >= $2 AND end_date_time <= $3
+        ORDER BY start_date_time ASC`,
+            [userId, start, end]
+        );
         res.status(200).json(result.rows);
-
     } catch (err) {
-        console.error("ERRO GET /eventos:", err);
-        res.status(500).json({ message: "Erro ao buscar eventos!" });
+        console.error(err);
+        res.status(500).json({ message: "Erro ao buscar eventos" });
     }
 });
-
 
 app.get("/eventos/:id", autenticarToken, async (req, res) => {
     const userId = req.userId;
