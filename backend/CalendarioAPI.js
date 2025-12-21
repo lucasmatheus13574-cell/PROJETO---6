@@ -48,6 +48,29 @@ pool.query(`
 
 
 
+(async () => {
+    try {
+        await pool.query(`
+        DO $$
+        BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'check_event_dates'
+        ) THEN
+            ALTER TABLE eventos
+            ADD CONSTRAINT check_event_dates
+            CHECK (start_date_time <= end_date_time);
+        END IF;
+        END $$;
+    `);
+        console.log('Constraint check_event_dates verificada/criada.');
+    } catch (err) {
+        console.error('Erro ao criar constraint check_event_dates:', err.message);
+    }
+})();
+
+
 
 
 
@@ -110,10 +133,10 @@ app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
 
 app.get("/eventos", autenticarToken, async (req, res) => {
     const userId = req.userId;
-    const { start , end } = req.query;
+    const { start, end } = req.query;
 
     try {
-        const result  = await pool.query(
+        const result = await pool.query(
             `SELECT * FROM eventos WHERE userId = $1 AND 
         start_date_time >= $2 AND end_date_time <= $3
         ORDER BY start_date_time ASC`,
@@ -125,6 +148,8 @@ app.get("/eventos", autenticarToken, async (req, res) => {
         res.status(500).json({ message: "Erro ao buscar eventos" });
     }
 });
+
+
 
 app.get("/eventos/:id", autenticarToken, async (req, res) => {
     const userId = req.userId;
