@@ -42,6 +42,7 @@ function Calendario() {
     const { showEvents, showTasks } = useContext(FilterContext);
 
 
+
     const messages = {
         allDay: 'Dia inteiro',
         previous: 'Anterior',
@@ -78,7 +79,8 @@ function Calendario() {
         location: row.location || '',
         color: row.color || '#3788d8',
         tipo: row.tarefa ? 'tarefa' : 'evento',
-        prioridade: row.prioridade
+        prioridade: row.prioridade,
+        allDay: !!(row.allday || row.allDay)
     });
 
 
@@ -121,6 +123,7 @@ function Calendario() {
                 tipo: 'tarefa',
                 prioridade: t.prioridade,
                 concluida: t.concluida,
+                allDay: !!t.allday,
                 raw: t
             }));
 
@@ -128,6 +131,18 @@ function Calendario() {
             let combined = [];
             if (showEvents) combined = combined.concat(mappedEvents);
             if (showTasks) combined = combined.concat(mappedTasks);
+
+            // Sort: by day, and place 'allday' tarefas at the top of the same day
+            combined.sort((a, b) => {
+                const aDay = moment(a.start).startOf('day').valueOf();
+                const bDay = moment(b.start).startOf('day').valueOf();
+                if (aDay !== bDay) return aDay - bDay;
+                const aAll = a.raw && a.raw.allday;
+                const bAll = b.raw && b.raw.allday;
+                if (aAll && !bAll) return -1;
+                if (!aAll && bAll) return 1;
+                return 0;
+            });
 
             setEventos(combined);
         } catch (err) {

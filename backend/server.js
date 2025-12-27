@@ -48,9 +48,13 @@ pool.query(
       data TEXT,
       prioridade TEXT,
       concluida INTEGER DEFAULT 0,
+      allday BOOLEAN DEFAULT FALSE,
       FOREIGN KEY(userId) REFERENCES users(id)
   )`
 );
+
+// ensure the column exists in older DBs
+pool.query(`ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS allday BOOLEAN DEFAULT FALSE`);
 
 
 
@@ -174,19 +178,20 @@ app.get("/tarefas", autenticarToken, (req, res) => {
 
 
 app.post("/tarefas", autenticarToken, async (req, res) => {
-  const { tarefa, data, prioridade } = req.body;
+  const { tarefa, data, prioridade, allday } = req.body;
 
   if (!tarefa || !data)
     return res.status(400).json({ message: "Título e data são obrigatórios!" });
 
   try {
     const result = await pool.query(
-      "INSERT INTO tarefas (userId, tarefa, data, prioridade) VALUES ($1, $2, $3, $4) RETURNING id",
-      [req.userId, tarefa, data, prioridade || '']
+      "INSERT INTO tarefas (userId, tarefa, data, prioridade, allday) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [req.userId, tarefa, data, prioridade || '', !!allday]
     );
+    const row = result.rows[0];
     res.status(201).json({
       message: "Tarefa adicionada!",
-      tarefa: { id: result.rows[0].id, tarefa, data, prioridade: prioridade || '', concluida: 0 }
+      tarefa: { id: row.id, tarefa: row.tarefa, data: row.data, prioridade: row.prioridade || '', concluida: row.concluida, allday: row.allday }
     });
   } catch (err) {
     console.error("Add tarefa error:", err);
@@ -196,12 +201,12 @@ app.post("/tarefas", autenticarToken, async (req, res) => {
 
 
 app.put("/tarefas/:id", autenticarToken, (req, res) => {
-  const { tarefa, data, prioridade } = req.body;
+  const { tarefa, data, prioridade, allday } = req.body;
   const { id } = req.params;
 
   pool.query(
-    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3 WHERE id=$4 AND userId=$5",
-    [tarefa, data, prioridade, id, req.userId],
+    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3, allday=$4 WHERE id=$5 AND userId=$6",
+    [tarefa, data, prioridade, !!allday, id, req.userId],
     function (err) {
       if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
       res.json({ message: "Tarefa atualizada!" });
