@@ -1,0 +1,29 @@
+.calendar-animate-next {
+    animation: slideNext 0.25s ease;
+}
+
+.calendar-animate-prev {
+    animation: slidePrev 0.25s ease;
+}
+
+@keyframes slideNext {
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slidePrev {
+    from {
+        opacity: 0;
+        transform: translateX(-24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}

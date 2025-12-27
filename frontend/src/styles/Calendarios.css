@@ -191,105 +191,74 @@
 
 
 
+/* Modal styles moved to `src/styles/EventModal.css` */
 
+/* event-modal header moved to EventModal.css */
 
-/* MODAL */
-.event-modal {
-    background: #ffffff;
-    width: 380px;
-    max-width: 95%;
-    border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    animation: fadeIn 0.25s ease;
-}
+/* modal title styles moved to EventModal.css */
 
-/* HEADER */
-.event-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid #eee;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-}
-
-/* BODY */
 .event-modal-body {
-    padding: 16px;
+    padding: 28px 32px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-}
+    gap: 28px;
+} 
 
-.event-row {
+
+
+.event-field {
     display: flex;
+    flex-direction: column;
     gap: 12px;
+    margin-bottom: 16px;
+} 
+
+.event-field label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #444;
 }
 
-.event-row div {
-    flex: 1;
+
+
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
-/* INPUTS */
-.event-input,
-.event-textarea {
-    width: 100%;
-    padding: 4px 5px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
+
+/* modal close button moved to EventModal.css */
+
+/* event-row grid moved to EventModal.css for modal layout */
+
+/* Inputs moved to EventModal.css (scoped) */ 
+
+/* event color input moved to EventModal.css */
+
+/* ensure paddings on small screens */
+@media (max-width: 768px) {
+    .event-modal-body { padding: 18px; }
+    .event-row { gap: 12px; }
 }
 
-.event-textarea {
-    resize: none;
-    min-height: 70px;
+.event-input:focus,
+.event-textarea:focus {
+    outline: none;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
 }
 
-.event-color {
-    width: 60px;
-    height: 34px;
-    border: none;
-}
+/* Footer & button styles moved to shared styles (`ui.css`) and modal styles (`EventModal.css`) */
 
-/* FOOTER */
-.event-modal-footer {
-    padding: 16px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    border-top: 1px solid #eee;
-}
 
-/* BUTTONS */
-.btn-primary {
-    background: #1a73e8;
-    color: #fff;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.btn-secondary {
-    background: #e0e0e0;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.btn-danger {
-    background: #d93025;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-}
+/* Footer & button styles moved to shared styles (`ui.css`) and modal styles (`EventModal.css`) */
 
 .logout-btn {
     background-color: #ff4d4d;
@@ -306,6 +275,32 @@
     background-color: #e63939;
 }
 
+.btn-secondary {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #dcdcdc;
+    background: #fff;
+    cursor: pointer;
+}
+
+.btn-secondary.active {
+    background: #1a73e8;
+    color: white;
+    border-color: #1a73e8;
+}
+
+.nav-btn {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .calendar-topbar { flex-direction: column; align-items: stretch }
+    .calendar-topbar .minimap { display: none }
+}
 
 /* ANIMATION */
 @keyframes fadeIn {
@@ -319,3 +314,112 @@
         transform: scale(1);
     }
 }
+
+/* react-big-calendar toolbar styles */
+.rbc-toolbar.custom-toolbar {
+    background: #fff;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+.rbc-toolbar .btn-secondary {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.rbc-btn-group button {
+    margin-right: 6px;
+}
+
+.rbc-toolbar .custom-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* View dropdown pill */
+.view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #222327;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 28px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+
+.view-toggle .caret {
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    transition: transform 0.15s ease;
+}
+
+.view-toggle .caret.open {
+    transform: rotate(180deg);
+}
+
+.view-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #fff;
+    color: #000;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    min-width: 200px;
+    z-index: 60;
+    overflow: hidden;
+}
+
+.view-dropdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px 16px;
+    background: transparent;
+    color: #333;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.view-dropdown-item:last-child {
+    border-bottom: none;
+    background: rgba(255,255,255,0.02);
+}
+
+.view-dropdown-item:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.item-label { margin-right: 12px; }
+
+.item-shortcut {
+    opacity: 0.55;
+    font-size: 13px;
+    padding-left: 8px;
+}
+
+/* Small screens: compress toolbar */
+@media (max-width: 600px) {
+    .rbc-toolbar.custom-toolbar { padding: 8px; }
+    .rbc-toolbar .btn-secondary { padding: 6px 8px; font-size: 13px; }
+    .rbc-toolbar .custom-nav > div { display: none; }
+    .view-toggle { padding: 6px 10px; font-size: 13px; }
+}
+
+/* Small screens: compress toolbar */
+@media (max-width: 600px) {
+    .rbc-toolbar.custom-toolbar { padding: 8px; }
+    .rbc-toolbar .btn-secondary { padding: 6px 8px; font-size: 13px; }
+    .rbc-toolbar .custom-nav > div { display: none; }
+    .view-toggle { padding: 6px 10px; font-size: 13px; }
+}
+

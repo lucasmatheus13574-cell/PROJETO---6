@@ -1,6 +1,5 @@
-import React, { createContext, useState } from 'react';
-
-export const FilterContext = createContext();
+import React, { useState } from 'react';
+import { FilterContext } from './FilterContextValue';
 
 export const FilterProvider = ({ children }) => {
     const [showEvents, setShowEvents] = useState(true);

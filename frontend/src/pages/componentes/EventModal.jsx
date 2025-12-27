@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import Swal from 'sweetalert2';
+import '../../styles/EventModal.css';
 
 const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
     const safeEvento = evento || {};
@@ -82,7 +83,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                 Swal.fire('Erro', 'Não foi possível salvar o evento', 'error');
             }
         } else {
-            // tarefa - map fields
+            
             const payload = {
                 tarefa: titulo,
                 data: moment(start).format('YYYY-MM-DD'),
@@ -166,28 +167,45 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
         <div className="event-modal-overlay">
             <div className="event-modal">
 
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <input type="radio" name="tipo" value="evento" checked={tipo === 'evento'} onChange={() => setTipo('evento')} /> Evento
-                    </label>
-                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <input type="radio" name="tipo" value="tarefa" checked={tipo === 'tarefa'} onChange={() => setTipo('tarefa')} /> Tarefa
-                    </label>
+                    <div className="event-modal-header">
+                    <div className="header-left">
+                        <div className="tipo-toggle" role="radiogroup" aria-label="Tipo">
+                            <label className={`tipo-option ${tipo === 'evento' ? 'active' : ''}`}>
+                                <input type="radio" name="tipo" value="evento" checked={tipo === 'evento'} onChange={() => setTipo('evento')} />
+                                Evento
+                            </label>
+                            <label className={`tipo-option ${tipo === 'tarefa' ? 'active' : ''}`}>
+                                <input type="radio" name="tipo" value="tarefa" checked={tipo === 'tarefa'} onChange={() => setTipo('tarefa')} />
+                                Tarefa
+                            </label>
+                        </div>
+                        <div className="modal-title">
+                            <h2>{isCreate ? 'Criar' : 'Editar'} <span className="muted">{tipo === 'evento' ? 'Evento' : 'Tarefa'}</span></h2>
+                            <div className="modal-subtitle">{moment(start).format('DD/MM/YYYY HH:mm')} — {moment(end).format('DD/MM/YYYY HH:mm')}</div>
+                        </div>
+                    </div>
+                    <div className="header-actions">
+                        <button className="modal-close" onClick={onClose} aria-label="Fechar">&times;</button>
+                    </div>
                 </div>
 
                 <div className="event-modal-body">
-                    <label>Título</label>
-                    <input className="event-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+                    <div className="event-field">
+                        <label>Título</label>
+                        <input className="event-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+                    </div>
 
-                    <label>Descrição</label>
-                    <textarea className="event-textarea" value={description} onChange={(e) => setDescription(e.target.value)} />
+                    <div className="event-field">
+                        <label>Descrição</label>
+                        <textarea className="event-textarea" value={description} onChange={(e) => setDescription(e.target.value)} />
+                    </div>
 
                     <div className="event-row">
-                        <div>
+                        <div className="event-field">
                             <label>Início</label>
                             <input className="event-input" type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
                         </div>
-                        <div>
+                        <div className="event-field">
                             <label>Fim</label>
                             <input className="event-input" type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
                         </div>
@@ -195,11 +213,11 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
 
                     {tipo === 'evento' ? (
                         <div className="event-row">
-                            <div>
+                            <div className="event-field color-field">
                                 <label>Cor</label>
                                 <input className="event-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} />
                             </div>
-                            <div>
+                            <div className="event-field">
                                 <label>Local</label>
                                 <input className="event-input"
                                     value={location}
@@ -210,7 +228,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                         </div>
                     ) : (
                         <div className="priority-field">
-                            <div>
+                            <div className="event-field">
                                 <label>Prioridade</label>
                                 <select className='priority-select' value={priority} onChange={(e) => setPriority(e.target.value)}>
                                     <option value="baixa">Baixa</option>
@@ -223,18 +241,20 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                 </div>
 
                 <div className="event-modal-footer">
-                    <button className="btn-primary" onClick={handleSave} disabled={loading}>
-                        {loading ? 'Salvando...' : isCreate ? 'Criar' : 'Salvar'}
-                    </button>
+                    <div className="footer-left">
+                        {/* show conclude only for tarefa and in edit mode */}
+                        {!isCreate && tipo === 'tarefa' && onConclude && !safeEvento.concluida && (
+                            <button className="btn-secondary" onClick={handleConclude}>Concluir</button>
+                        )}
 
-                    {/* show conclude only for tarefa and in edit mode */}
-                    {!isCreate && tipo === 'tarefa' && onConclude && !safeEvento.concluida && (
-                        <button className="btn-secondary" onClick={handleConclude} style={{ marginLeft: 8 }}>Concluir tarefa</button>
-                    )}
+                        {!isCreate && onDelete && <button className="btn-danger" onClick={handleDelete}>Deletar</button>}
+                    </div>
 
-                    {!isCreate && onDelete && <button className="btn-danger" onClick={handleDelete} style={{ marginLeft: 8 }}>Deletar</button>}
-                    <button className="btn-secondary" onClick={onClose} style={{ marginLeft: 8 }}>Fechar</button>
-                </div>
+                    <div className="footer-right">
+                        <button className="btn-secondary" onClick={onClose}>Fechar</button>
+                        <button className="btn-primary" onClick={handleSave} disabled={loading}>{loading ? 'Salvando...' : isCreate ? 'Criar' : 'Salvar'}</button>
+                    </div>
+                </div> 
             </div>
         </div>
     );

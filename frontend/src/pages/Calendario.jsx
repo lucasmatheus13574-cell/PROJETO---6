@@ -8,13 +8,15 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import '../styles/Calendarios.css';
 import Swal from 'sweetalert2';
-import { FilterContext } from '../context/FilterContext';
+import { FilterContext } from '../context/FilterContextValue';
 
 
 import CustomToolbar from './componentes/CustomToobar';
 import EventModal from './componentes/EventModal';
 import CalendarYearView from './componentes/CalendarYearView';
+import { CalendarContext } from '../context/CalendarContext';
 import '../styles/CalendarYear.css';
+
 
 moment.locale('pt-br');
 
@@ -36,9 +38,6 @@ function Calendario() {
 
     const [eventos, setEventos] = useState([]);
     const [eventoSelecionado, setEventoSelecionado] = useState(null);
-    const [showYearView, setShowYearView] = useState(false);
-    const [year, setYear] = useState(moment().year());
-    const [currentDate, setCurrentDate] = useState(moment().toDate());
     const rangeRef = useRef({ start: null, end: null });
     const { showEvents, showTasks } = useContext(FilterContext);
 
@@ -59,6 +58,9 @@ function Calendario() {
         noEventsInRange: 'Nenhum evento neste período',
         showMore: total => `+ Ver mais (${total})`,
     };
+
+    // view controls from CalendarContext
+    const { currentDate, setCurrentDate, view, setView, showYearView, setShowYearView, year, setYear } = useContext(CalendarContext);
 
 
     const formats = {
@@ -103,7 +105,7 @@ function Calendario() {
             if (!resEvents.ok) throw new Error('Erro ao buscar eventos');
             const eventsData = await resEvents.json();
 
-            // fetch tarefas (no filtro por data no backend; we'll filter client-side)
+
             const resTasks = await fetch(`${URL_API}/tarefas`, { headers: { 'authorization': `Bearer ${token}` } });
             if (!resTasks.ok) throw new Error('Erro ao buscar tarefas');
             const tasksData = await resTasks.json();
@@ -122,7 +124,7 @@ function Calendario() {
                 raw: t
             }));
 
-            // Merge based on filters
+
             let combined = [];
             if (showEvents) combined = combined.concat(mappedEvents);
             if (showTasks) combined = combined.concat(mappedTasks);
@@ -141,8 +143,15 @@ function Calendario() {
         fetchEvents(start, end);
     }, [fetchEvents]);
 
+    // Refetch when currentDate changes (e.g., via mini calendar or navigation)
     useEffect(() => {
-        // refetch when filters change
+        const start = moment(currentDate).utc().startOf('month').toISOString();
+        const end = moment(currentDate).utc().endOf('month').toISOString();
+        rangeRef.current = { start, end };
+        fetchEvents(start, end);
+    }, [currentDate, fetchEvents]);
+    useEffect(() => {
+
         const { start, end } = rangeRef.current;
         fetchEvents(start, end);
     }, [showEvents, showTasks, fetchEvents]);
@@ -175,15 +184,13 @@ function Calendario() {
         });
     };
 
-    const toggleYearView = () => setShowYearView((s) => !s);
     const prevYear = () => setYear((y) => y - 1);
     const nextYear = () => setYear((y) => y + 1);
     const selectMonth = (monthIndex) => {
-        // Set calendar to first day of selected month and close year view
         const d = moment({ year, month: monthIndex, day: 1 }).toDate();
         setCurrentDate(d);
         setShowYearView(false);
-        // update fetched range to that month
+
         const start = moment(d).utc().startOf('month').toISOString();
         const end = moment(d).utc().endOf('month').toISOString();
         rangeRef.current = { start, end };
@@ -191,7 +198,7 @@ function Calendario() {
     };
 
     const handleEventClick = (event) => {
-        // when clicking a tarefa, event will have tipo 'tarefa'
+
         setEventoSelecionado({ mode: 'edit', ...event });
     }
 
@@ -202,7 +209,7 @@ function Calendario() {
     const createItem = async (payload, tipo) => {
         try {
             if (tipo === 'evento') {
-                // ensure payload timestamps are UTC ISO
+
                 payload.start_date_time = moment(payload.start_date_time).utc().toISOString();
                 payload.end_date_time = moment(payload.end_date_time).utc().toISOString();
 
@@ -371,28 +378,7 @@ function Calendario() {
     );
 
 
-    const logout = () => {
-        Swal.fire({
-            title: "Deseja sair?",
-            text: "Você será desconectado da sua conta!",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Sim, sair",
-            cancelButtonText: "Cancelar"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                localStorage.removeItem("token");
-                Swal.fire({
-                    icon: "success",
-                    title: "Sessão encerrada!",
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.location.href = "/";
-                });
-            }
-        });
-    };
+
 
 
 
@@ -406,19 +392,7 @@ function Calendario() {
 
 
             <div className="calendar-container">
-                <div className="calendar-topbar" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                    <button className="btn-secondary" onClick={() => { const s = moment().utc().startOf('month').toISOString(); const e = moment().utc().endOf('month').toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); setCurrentDate(moment().toDate()); }}>
-                        Hoje
-                    </button>
-                    <button className="btn-secondary" onClick={() => toggleYearView()}>
-                        Ano
-                    </button>
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                        <button className="btn-secondary" onClick={() => { const prev = moment(currentDate).subtract(1, 'months').toDate(); setCurrentDate(prev); handleRangeChange({ start: prev, end: prev }); }}>&lt; Anterior</button>
-                        <button className="btn-secondary" onClick={() => { const next = moment(currentDate).add(1, 'months').toDate(); setCurrentDate(next); handleRangeChange({ start: next, end: next }); }}>Proximo &gt;</button>
-                        <button className="logout-btn" onClick={logout}>🚪 Logout</button>
-                    </div>
-                </div>
+
 
 
                 {showYearView ? (
@@ -432,6 +406,9 @@ function Calendario() {
                 ) : (
                     <DragAndDropCalendar
                         date={currentDate}
+                        view={view}
+                        onView={(v) => setView(v)}
+                        onNavigate={(date) => { setCurrentDate(date); const s = moment(date).utc().startOf('month').toISOString(); const e = moment(date).utc().endOf('month').toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); }}
                         defaultView="month"
                         views={['month', 'week', 'day']}
                         events={eventos}

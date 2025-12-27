@@ -4,7 +4,7 @@
 }
 
 .sidebar {
-    width: 240px;
+    width: 340px;
     background: #1e1e1e;
     color: white;
     padding: 20px;
@@ -13,7 +13,7 @@
 }
 
 .sidebar.closed {
-    width: 120px;
+    width: 250px;
 }
 
 .sidebar.open {
@@ -126,3 +126,40 @@
     padding: 20px;
     overflow-y: auto;
 }
+
+.sidebar-minimap {
+    margin-top: 18px;
+}
+
+.minimap {
+    background: #111217;
+    padding: 10px;
+    border-radius: 8px;
+    color: #fff;
+}
+
+.minimap-header {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.minimap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.minimap-day {
+    width: 28px;
+    height: 28px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px;
+    color: #ddd;
+}
+
+.minimap-day.other-month { color: rgba(255,255,255,0.35); }
+.minimap-day.today { background: #1a73e8; color: #fff; }
+.minimap-day:hover { background: rgba(255,255,255,0.06); }
