@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
-import moment from 'moment';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import 'moment/locale/pt-br';
+import ptBR from 'date-fns/locale/pt-BR';
+
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -16,21 +16,43 @@ import EventModal from './componentes/EventModal';
 import CalendarYearView from './componentes/CalendarYearView';
 import { CalendarContext } from '../context/CalendarContext';
 import '../styles/CalendarYear.css';
+import {
+    format,
+    parseISO,
+    startOfDay,
+    endOfDay,
+    startOfMonth,
+    endOfMonth,
+    isSameDay,
+    startOfWeek,
+    getDay
+} from 'date-fns';
+
+const locales = {
+    'pt-BR': ptBR,
+};
+
+const localizer = dateFnsLocalizer({
+    format,
+    parse: parseISO,
+    startOfWeek: (date) => startOfWeek(date, { locale: ptBR }),
+    getDay,
+    locales,
+});
 
 
-moment.locale('pt-br');
 
-const CustomWeekdayHeader = ({ date, localizer }) => {
+
+const CustomWeekdayHeader = ({ date }) => {
     return (
         <span>
-            {localizer.format(date, 'dddd', 'pt-br')}
+            {format(date, 'EEEE', { locale: ptBR })}
         </span>
     );
 };
 
 
 const DragAndDropCalendar = withDragAndDrop(Calendar);
-const localizer = momentLocalizer(moment);
 
 function Calendario() {
     const URL_API = import.meta.env.VITE_API_URL;
@@ -50,7 +72,6 @@ function Calendario() {
         today: 'Hoje',
         month: 'Mês',
         week: 'Semana',
-        work_week: 'Semana útil',
         day: 'Dia',
         agenda: 'Agenda',
         date: 'Data',
@@ -64,17 +85,18 @@ function Calendario() {
     const { currentDate, setCurrentDate, view, setView, showYearView, setShowYearView, year, setYear } = useContext(CalendarContext);
 
 
-    const formats = {
-        weekdayFormat: (date, culture, localizer) =>
-            localizer.format(date, 'ddd', culture),
-    };
-
 
     const mapRowToEvent = (row) => ({
         id: row.id,
         title: row.titulo || row.tarefa,
-        start: row.start_date_time ? moment.parseZone(row.start_date_time).toDate() : (row.data ? moment(row.data).startOf('day').toDate() : new Date()),
-        end: row.end_date_time ? moment.parseZone(row.end_date_time).toDate() : (row.data ? moment(row.data).endOf('day').toDate() : new Date()),
+        start: row.start_date_time
+            ? parseISO(row.start_date_time)
+            : (row.data ? startOfDay(parseISO(row.data)) : new Date()),
+
+        end: row.end_date_time
+            ? parseISO(row.end_date_time)
+            : (row.data ? endOfDay(parseISO(row.data)) : new Date()),
+
         description: row.description || '',
         location: row.location || '',
         color: row.color || '#3788d8',
@@ -116,8 +138,8 @@ function Calendario() {
             const mappedTasks = tasksData.map((t) => ({
                 id: t.id,
                 title: t.tarefa,
-                start: t.data ? moment(t.data).startOf('day').toDate() : new Date(),
-                end: t.data ? moment(t.data).endOf('day').toDate() : new Date(),
+                start: t.data ? startOfDay(parseISO(t.data)) : new Date(),
+                end: t.data ? endOfDay(parseISO(t.data)) : new Date(),
                 description: '',
                 color: '#0d6efd',
                 tipo: 'tarefa',
@@ -134,8 +156,9 @@ function Calendario() {
 
             // Sort: by day, and place 'allday' tarefas at the top of the same day
             combined.sort((a, b) => {
-                const aDay = moment(a.start).startOf('day').valueOf();
-                const bDay = moment(b.start).startOf('day').valueOf();
+                const aDay = startOfDay(a.start).getTime();
+                const bDay = startOfDay(b.start).getTime();
+
                 if (aDay !== bDay) return aDay - bDay;
                 const aAll = a.raw && a.raw.allday;
                 const bAll = b.raw && b.raw.allday;
@@ -152,16 +175,18 @@ function Calendario() {
     }, [URL_API, token, showEvents, showTasks]);
 
     useEffect(() => {
-        const start = moment().utc().startOf('month').toISOString();
-        const end = moment().utc().endOf('month').toISOString();
+        const start = startOfMonth(new Date()).toISOString();
+        const end = endOfMonth(new Date()).toISOString();
+
         rangeRef.current = { start, end };
         fetchEvents(start, end);
     }, [fetchEvents]);
 
     // Refetch when currentDate changes (e.g., via mini calendar or navigation)
     useEffect(() => {
-        const start = moment(currentDate).utc().startOf('month').toISOString();
-        const end = moment(currentDate).utc().endOf('month').toISOString();
+        const start = startOfMonth(currentDate).toISOString();
+        const end = endOfMonth(currentDate).toISOString();
+
         rangeRef.current = { start, end };
         fetchEvents(start, end);
     }, [currentDate, fetchEvents]);
@@ -173,19 +198,22 @@ function Calendario() {
 
     const handleRangeChange = (range) => {
         let start, end;
+
         if (Array.isArray(range)) {
-            start = moment(range[0]).utc().startOf('day').toISOString();
-            end = moment(range[range.length - 1]).utc().endOf('day').toISOString();
-        } else if (range.start && range.end) {
-            start = moment(range.start).utc().startOf('day').toISOString();
-            end = moment(range.end).utc().endOf('day').toISOString();
+            start = startOfDay(range[0]).toISOString();
+            end = endOfDay(range[range.length - 1]).toISOString();
+        } else if (range?.start && range?.end) {
+            start = startOfDay(range.start).toISOString();
+            end = endOfDay(range.end).toISOString();
         } else {
-            start = moment().utc().startOf('month').toISOString();
-            end = moment().utc().endOf('month').toISOString();
+            start = startOfMonth(new Date()).toISOString();
+            end = endOfMonth(new Date()).toISOString();
         }
+
         rangeRef.current = { start, end };
         fetchEvents(start, end);
     };
+
 
     const openCreateModal = ({ start, end }) => {
         setEventoSelecionado({
@@ -202,15 +230,18 @@ function Calendario() {
     const prevYear = () => setYear((y) => y - 1);
     const nextYear = () => setYear((y) => y + 1);
     const selectMonth = (monthIndex) => {
-        const d = moment({ year, month: monthIndex, day: 1 }).toDate();
-        setCurrentDate(d);
+        const date = new Date(year, monthIndex, 1);
+
+        setCurrentDate(date);
         setShowYearView(false);
 
-        const start = moment(d).utc().startOf('month').toISOString();
-        const end = moment(d).utc().endOf('month').toISOString();
+        const start = startOfMonth(date).toISOString();
+        const end = endOfMonth(date).toISOString();
+
         rangeRef.current = { start, end };
         fetchEvents(start, end);
     };
+
 
     const handleEventClick = (event) => {
 
@@ -225,8 +256,9 @@ function Calendario() {
         try {
             if (tipo === 'evento') {
 
-                payload.start_date_time = moment(payload.start_date_time).utc().toISOString();
-                payload.end_date_time = moment(payload.end_date_time).utc().toISOString();
+                payload.start_date_time = new Date(payload.start_date_time).toISOString();
+                payload.end_date_time = new Date(payload.end_date_time).toISOString();
+
 
                 const res = await fetch(`${URL_API}/eventos`, {
                     method: 'POST',
@@ -266,8 +298,8 @@ function Calendario() {
     const updateItem = async (id, payload, tipo) => {
         try {
             if (tipo === 'evento') {
-                payload.start_date_time = moment(payload.start_date_time).utc().toISOString();
-                payload.end_date_time = moment(payload.end_date_time).utc().toISOString();
+                payload.start_date_time = new Date(payload.start_date_time).toISOString();
+                payload.end_date_time = new Date(payload.end_date_time).toISOString();
 
                 const res = await fetch(`${URL_API}/eventos/${id}`, {
                     method: 'PUT',
@@ -356,15 +388,15 @@ function Calendario() {
             // Update tarefa - change date
             const payload = {
                 tarefa: event.title,
-                data: moment(start).format('YYYY-MM-DD'),
+                data: format(start, 'yyyy-MM-dd'),
                 prioridade: event.prioridade || 'baixa'
             };
             await updateItem(event.id, payload, 'tarefa');
         } else {
             const payload = {
                 titulo: event.title,
-                start_date_time: moment(start).utc().toISOString(),
-                end_date_time: moment(end).utc().toISOString(),
+                start_date_time: new Date(start).toISOString(),
+                end_date_time: new Date(end).toISOString(),
                 description: event.description || '',
                 color: event.color || '#3788d8'
             };
@@ -387,7 +419,8 @@ function Calendario() {
             <strong>{event.title}</strong>
             {event.location && <div>{event.location}</div>}
             <div>
-                {moment(event.start).format('HH:mm')} - {moment(event.end).format('HH:mm')}
+                {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
+
             </div>
         </div>
     );
@@ -395,6 +428,10 @@ function Calendario() {
 
 
 
+
+    console.log(
+        format(new Date(), 'EEEE, MMMM', { locale: ptBR })
+    );
 
 
 
@@ -417,20 +454,82 @@ function Calendario() {
                         onNextYear={nextYear}
                         onSelectMonth={selectMonth}
                         onClose={() => setShowYearView(false)}
+                        onDayClick={async (date) => {
+                            // Fetch events and tasks for the clicked day and show a preview modal
+                            try {
+                                const start = endOfDay(new Date(date).utc().startOf('day').toISOString());
+                                const end = startOfDay(new Date(date).utc().endOf('day').toISOString());
+
+                                // eventos for day
+                                const urlEvents = `${URL_API}/eventos?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+                                const resEvents = await fetch(urlEvents, { headers: { 'authorization': `Bearer ${token}` } });
+                                const eventsData = resEvents.ok ? await resEvents.json() : [];
+
+                                // tarefas (filter by date)
+                                const resTasks = await fetch(`${URL_API}/tarefas`, { headers: { 'authorization': `Bearer ${token}` } });
+                                const tasksData = resTasks.ok ? await resTasks.json() : [];
+                                const tasksForDay = tasksData.filter(t => t.data && isSameDay(parseISO(t.data), date))
+
+
+                                const items = [];
+                                (eventsData || []).forEach(ev => items.push({ type: 'evento', title: ev.titulo || ev.title, start: ev.start_date_time, end: ev.end_date_time }));
+                                tasksForDay.forEach(t => items.push({ type: 'tarefa', title: t.tarefa, start: t.data, end: t.data }));
+
+                                let html = '<div style="text-align:left">';
+                                if (items.length === 0) html += '<div>Nenhum evento ou tarefa neste dia.</div>';
+                                else {
+                                    html += '<ul style="padding-left:16px;">';
+                                    items.forEach(it => {
+                                        if (it.type === 'evento') {
+                                            const time = it.start ? format(parseISO(it.start), 'HH:mm', { locale: ptBR }) + ' - ' + format(parseISO(it.end), 'HH:mm', { locale: ptBR }) : '';
+                                            html += `<li><strong>${time}</strong> ${it.title}</li>`;
+                                        } else {
+                                            html += `<li><strong>Tarefa</strong> ${it.title}</li>`;
+                                        }
+                                    });
+                                    html += '</ul>';
+                                }
+                                html += '</div>';
+
+                                const { isConfirmed } = await Swal.fire({
+                                    title: format(date, "EEEE, d 'de' MMMM yyyy", { locale: ptBR }),
+                                    html,
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Abrir dia',
+                                    cancelButtonText: 'Fechar',
+                                    width: 520
+                                });
+
+                                if (isConfirmed) {
+                                    // Open day view
+                                    setCurrentDate(date);
+                                    setShowYearView(false);
+                                    setView('day');
+
+                                    const s = startOfMonth(date).toISOString();
+                                    const e = endOfMonth(date).toISOString();
+
+                                    rangeRef.current = { start: s, end: e };
+                                    fetchEvents(s, e);
+                                }
+
+                            } catch (err) {
+                                console.error('Erro ao carregar dia:', err);
+                                Swal.fire('Erro', 'Não foi possível carregar os itens desse dia', 'error');
+                            }
+                        }}
                     />
                 ) : (
                     <DragAndDropCalendar
                         date={currentDate}
                         view={view}
                         onView={(v) => setView(v)}
-                        onNavigate={(date) => { setCurrentDate(date); const s = moment(date).utc().startOf('month').toISOString(); const e = moment(date).utc().endOf('month').toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); }}
+                        onNavigate={(date) => { setCurrentDate(date); const s = startOfMonth(date).toISOString(); const e = endOfMonth(date).toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); }}
                         defaultView="month"
                         views={['month', 'week', 'day']}
                         events={eventos}
                         localizer={localizer}
-                        culture="pt-br"
                         messages={messages}
-                        formats={formats}
                         resizable
                         onEventDrop={MoverEvent}
                         onEventResize={MoverEvent}

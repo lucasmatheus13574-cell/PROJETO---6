@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import moment from 'moment';
 import Swal from 'sweetalert2';
 import '../../styles/EventModal.css';
+import { format, parse, parseISO, isValid, isBefore, startOfDay, endOfDay, add } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
 
 const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
     const safeEvento = evento || {};
@@ -9,14 +10,28 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
     const isCreate = mode === 'create';
 
     const toLocalInput = (val) => {
-        if (!val) return moment().local().format('YYYY-MM-DDTHH:mm');
-        if (moment.isMoment(val)) return val.local().format('YYYY-MM-DDTHH:mm');
-        if (typeof val === 'string') return moment.parseZone(val).local().format('YYYY-MM-DDTHH:mm');
-        // Date or number
-        return moment(val).local().format('YYYY-MM-DDTHH:mm');
+        // produce a local datetime string 'yyyy-MM-ddTHH:mm'
+        if (!val) return format(new Date(), "yyyy-MM-dd'T'HH:mm");
+        if (val instanceof Date) return format(val, "yyyy-MM-dd'T'HH:mm");
+        if (typeof val === 'string') {
+            // Try ISO parse first
+            const parsed = parseISO(val);
+            if (isValid(parsed)) return format(parsed, "yyyy-MM-dd'T'HH:mm");
+            // fallback to parsing a local datetime string
+            const p = parse(val, "yyyy-MM-dd'T'HH:mm", new Date());
+            if (isValid(p)) return format(p, "yyyy-MM-dd'T'HH:mm");
+            // last resort
+            const d = new Date(val);
+            return format(d, "yyyy-MM-dd'T'HH:mm");
+        }
+        // number
+        return format(new Date(val), "yyyy-MM-dd'T'HH:mm");
     };
 
-    const toUTCISOString = (localDateTimeStr) => moment(localDateTimeStr).utc().toISOString();
+    const toUTCISOString = (localDateTimeStr) => {
+        const dt = parse(localDateTimeStr, "yyyy-MM-dd'T'HH:mm", new Date());
+        return dt.toISOString();
+    };
 
     const [tipo, setTipo] = useState(tipoVal || 'evento');
     const [titulo, setTitulo] = useState(title || altTitulo || '');
@@ -61,15 +76,15 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
         const slotStart = slots[0]?.start || start;
         const slotEnd = slots[0]?.end || end;
 
-        const startMoment = moment(slotStart);
-        const endMoment = moment(slotEnd);
+        const startDt = parse(slotStart, "yyyy-MM-dd'T'HH:mm", new Date());
+        const endDt = parse(slotEnd, "yyyy-MM-dd'T'HH:mm", new Date());
 
-        if (!startMoment.isValid() || !endMoment.isValid()) {
+        if (!isValid(startDt) || !isValid(endDt)) {
             Swal.fire('Atenção', 'Datas inválidas', 'warning');
             return;
         }
 
-        if (endMoment.isBefore(startMoment)) {
+        if (isBefore(endDt, startDt)) {
             Swal.fire('Atenção', 'A data de fim deve ser maior ou igual à data de início', 'warning');
             return;
         }
@@ -78,8 +93,8 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
             let s = slotStart;
             let e = slotEnd;
             if (allDay) {
-                s = moment(slotStart).startOf('day').format('YYYY-MM-DDTHH:mm');
-                e = moment(slotStart).endOf('day').format('YYYY-MM-DDTHH:mm');
+                s = format(startOfDay(startDt), "yyyy-MM-dd'T'HH:mm");
+                e = format(endOfDay(startDt), "yyyy-MM-dd'T'HH:mm");
             }
 
             const payload = {
@@ -106,7 +121,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
 
             const payload = {
                 tarefa: titulo,
-                data: moment(start).format('YYYY-MM-DD'),
+                data: format(parse(start, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd'),
                 prioridade: priority,
                 description,
                 allday: !!allDay
@@ -202,7 +217,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                         </div>
                         <div className="modal-title">
                             <h2>{isCreate ? 'Criar' : 'Editar'} <span className="muted">{tipo === 'evento' ? 'Evento' : 'Tarefa'}</span></h2>
-                            <div className="modal-subtitle">{moment(start).format('DD/MM/YYYY HH:mm')} — {moment(end).format('DD/MM/YYYY HH:mm')}</div>
+                            <div className="modal-subtitle">{format(parse(start, "yyyy-MM-dd'T'HH:mm", new Date()), 'dd/MM/yyyy HH:mm')} — {format(parse(end, "yyyy-MM-dd'T'HH:mm", new Date()), 'dd/MM/yyyy HH:mm')}</div>
                         </div>
                     </div>
                     <div className="header-actions">
@@ -227,7 +242,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                             <input
                                 className="event-input"
                                 type="date"
-                                value={moment(start).format('YYYY-MM-DD')}
+                                value={format(parse(start, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd')}
                                 onChange={(e) => setStart(e.target.value)}
                             />
 
@@ -246,44 +261,46 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                         </div>
                     ) : (
                         <div className="event-times">
-                            <div className="date-block">{moment(slots[0].start).format('dddd, D [de] MMMM')}</div>
+<div className="date-block">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
 
-                            {!allDay ? (
-                                <div className="times-list">
-                                    {slots.map((s, idx) => (
-                                        <div className="time-row" key={idx}>
-                                            <div className="time-block">
-                                                <input className="time-input" type="time" value={moment(s.start).format('HH:mm')} onChange={(e) => {
-                                                    const newSlots = [...slots];
-                                                    const newStart = moment(moment(s.start).format('YYYY-MM-DD') + 'T' + e.target.value).format('YYYY-MM-DDTHH:mm');
-                                                    newSlots[idx].start = newStart;
-                                                    setSlots(newSlots);
+                                    {!allDay ? (
+                                        <div className="times-list">
+                                            {slots.map((s, idx) => (
+                                                <div className="time-row" key={idx}>
+                                                    <div className="time-block">
+                                                        <input className="time-input" type="time" value={format(parse(s.start, "yyyy-MM-dd'T'HH:mm", new Date()), 'HH:mm')} onChange={(e) => {
+                                                            const newSlots = [...slots];
+                                                            const datePart = format(parse(s.start, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd');
+                                                            const newStart = `${datePart}T${e.target.value}`;
+                                                            newSlots[idx].start = newStart;
+                                                            setSlots(newSlots);
                                                 }} />
-                                            </div>
+                                                    </div>
 
-                                            <div className="dash">—</div>
+                                                    <div className="dash">—</div>
 
-                                            <div className="time-block">
-                                                <input className="time-input" type="time" value={moment(s.end).format('HH:mm')} onChange={(e) => {
-                                                    const newSlots = [...slots];
-                                                    const newEnd = moment(moment(s.end).format('YYYY-MM-DD') + 'T' + e.target.value).format('YYYY-MM-DDTHH:mm');
-                                                    newSlots[idx].end = newEnd;
-                                                    setSlots(newSlots);
-                                                }} />
-                                            </div>
+                                                    <div className="time-block">
+                                                        <input className="time-input" type="time" value={format(parse(s.end, "yyyy-MM-dd'T'HH:mm", new Date()), 'HH:mm')} onChange={(e) => {
+                                                            const newSlots = [...slots];
+                                                            const datePart = format(parse(s.end, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd');
+                                                            const newEnd = `${datePart}T${e.target.value}`;
+                                                            newSlots[idx].end = newEnd;
+                                                            setSlots(newSlots);
+                                                        }} />
+                                                    </div>
 
-                                            {idx > 0 && <button className="remove-slot" onClick={() => setSlots(slots.filter((_, i) => i !== idx))}>Remover</button>}
-                                        </div>
-                                    ))}
+                                                    {idx > 0 && <button className="remove-slot" onClick={() => setSlots(slots.filter((_, i) => i !== idx))}>Remover</button>}
+                                                </div>
+                                            ))}
 
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                                        <div className="date-summary" style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-                                            <div className="summary-card">
-                                                <div className="summary-title">{moment(slots[0].start).format('dddd, D [de] MMMM')}</div>
-                                                <div className="summary-sub">Não se repete</div>
-                                            </div>
-                                            <div style={{ marginLeft: 'auto' }}>
-                                                <button className="add-time-btn primary" onClick={() => setSlots([...slots, { start: slots[slots.length-1].end, end: moment(slots[slots.length-1].end).add(1, 'hour').format('YYYY-MM-DDTHH:mm') }])}>Adicionar horário</button>
+                                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                                                <div className="date-summary" style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                                                    <div className="summary-card">
+                                                        <div className="summary-title">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
+                                                        <div className="summary-sub">Não se repete</div>
+                                                    </div>
+                                                    <div style={{ marginLeft: 'auto' }}>
+                                                        <button className="add-time-btn primary" onClick={() => setSlots([...slots, { start: slots[slots.length-1].end, end: format(add(parse(slots[slots.length-1].end, "yyyy-MM-dd'T'HH:mm", new Date()), { hours: 1 }), "yyyy-MM-dd'T'HH:mm") }])}>Adicionar horário</button>
                                             </div>
                                         </div>
                                     </div>
@@ -292,7 +309,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                             ) : (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
                                     <div className="summary-card">
-                                        <div className="summary-title">{moment(slots[0].start).format('dddd, D [de] MMMM')}</div>
+                                        <div className="summary-title">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
                                         <div className="summary-sub">Não se repete</div>
                                     </div>
                                     <div style={{ marginLeft: 'auto' }}>
@@ -311,10 +328,6 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                         </div>
                     )}
 
-                    <div className="event-modal-actions">
-                        <button onClick={onClose}>Cancelar</button>
-                        <button onClick={handleSave}>Salvar</button>
-                    </div>
 
 
                     {tipo === 'evento' ? (

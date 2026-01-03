@@ -1,38 +1,30 @@
 import React from 'react';
-import moment from 'moment';
 import '../../styles/SideBar.css';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, format, getMonth, getDate } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
 
 export default function MiniMap({ currentDate, onSelectDate }) {
-    const m = moment(currentDate);
-    const start = m.clone().startOf('month');
-    const end = m.clone().endOf('month');
+    const m = currentDate instanceof Date ? currentDate : new Date(currentDate);
+    const start = startOfMonth(m);
+    const end = endOfMonth(m);
     let days = []; // will be filled with weeks of 7 days
 
-
-    // build weeks (Sunday first) - robust iteration with clone to avoid mutation issues
+    // build weeks (Sunday first)
     days = [];
-    let day = start.clone().startOf('week');
-    const endOfGrid = end.clone().endOf('week');
-    while (day.isSameOrBefore(endOfGrid, 'day')) {
+    let day = startOfWeek(start, { weekStartsOn: 0 });
+    const endOfGrid = endOfWeek(end, { weekStartsOn: 0 });
+    while (day <= endOfGrid) {
         const week = [];
         for (let i = 0; i < 7; i++) {
-            week.push(day.clone());
-            day.add(1, 'day');
+            week.push(day);
+            day = addDays(day, 1);
         }
         days.push(week);
     }
 
-    const isSameDay = (a, b) => {
-        try {
-            return !!(a && b && a.isSame && a.isSame(b, 'day'));
-        } catch  {
-            return false;
-        }
-    };
-
     return (
         <div className="minimap">
-            <div className="minimap-header">{m.format('MMMM YYYY')}</div>
+            <div className="minimap-header">{format(m, 'MMMM yyyy', { locale: ptBR })}</div>
             <table className="minimap-table">
                 <thead>
                     <tr>
@@ -43,9 +35,9 @@ export default function MiniMap({ currentDate, onSelectDate }) {
                     {days.map((week, idx) => (
                         <tr key={idx}>
                             {week.map((d,i) => (
-                                <td key={i} className={`minimap-day ${isSameDay(d, moment()) ? 'today' : ''} ${d.month() !== m.month() ? 'other-month' : ''}`}
-                                    onClick={() => onSelectDate(d.toDate())}>
-                                    {d.date()}
+                                <td key={i} className={`minimap-day ${isSameDay(d, new Date()) ? 'today' : ''} ${getMonth(d) !== getMonth(m) ? 'other-month' : ''}`}
+                                    onClick={() => onSelectDate(d)}>
+                                    {getDate(d)}
                                 </td>
                             ))}
                         </tr>

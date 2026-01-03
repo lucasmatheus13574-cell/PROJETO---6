@@ -1,11 +1,12 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
-import moment from "moment";
 import Swal from "sweetalert2";
 import { CalendarContext } from "../../context/CalendarContext";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "../../styles/Calendarios.css";
+import { format } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
 
-export default function CustomToolbar({ label, onNavigate, onView, view }) {
+export default function CustomToolbar({  onNavigate, onView, view }) {
     const { currentDate, setCurrentDate, setView, showYearView, setShowYearView } = useContext(CalendarContext);
 
     const navigate = (action) => {
@@ -73,13 +74,16 @@ export default function CustomToolbar({ label, onNavigate, onView, view }) {
         { value: 'year', label: 'Ano',  shortcut: 'Y' }
     ];
 
+    const formattedLabel = format(currentDate, 'MMMM yyyy', { locale: ptBR });
+    const displayLabel = formattedLabel.charAt(0).toUpperCase() + formattedLabel.slice(1);
+
     return (
         <div className="rbc-toolbar custom-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
             <div className="custom-nav" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <button className="nav-btn" aria-label="Prev" onClick={() => navigate('PREV')}>&#9664;</button>
                 <button className="btn-secondary" onClick={() => navigate('TODAY')}>Hoje</button>
                 <button className="nav-btn" aria-label="Next" onClick={() => navigate('NEXT')}>&#9654;</button>
-                <div style={{ marginLeft: 12, fontWeight: 600 }}>{label || moment(currentDate).format('MMMM YYYY')}</div>
+                <div style={{ marginLeft: 12, fontWeight: 600 }}>{displayLabel}</div>
             </div>
 
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }} ref={dropdownRef}>
