@@ -4,6 +4,10 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 
+
+import dayjs from "dayjs";
+import { generateWhatsAppLink } from "./utils/whatsapp.js";
+
 dotenv.config();
 
 const { Pool } = require("pg");
@@ -36,14 +40,27 @@ pool.query(
         end_date_time TIMESTAMPTZ,
         description TEXT,
         color TEXT,
-        FOREIGN KEY(userId) REFERENCES users(id)
-    )`
+        FOREIGN KEY(userId) REFERENCES users(id),
+        email TEXT,
+        phone TEXT
+            CREATE TABLE reminders (
+                id SERIAL PRIMARY KEY,
+                event_id INTEGER REFERENCES eventos(id) ON DELETE CASCADE,
+                method VARCHAR(20) NOT NULL,      -- 'whatsapp'
+                time_offset INTEGER NOT NULL,     -- minutos antes (-15, -60, etc)
+                created_at TIMESTAMP DEFAULT NOW()
 );
+
+    )`);
 
 pool.query(`
     ALTER TABLE eventos
     ADD COLUMN IF NOT EXISTS location TEXT
 `);
+
+
+
+
 
 
 
@@ -74,13 +91,15 @@ pool.query(`
 
 
 
+
+
+
 (async () => {
     try {
         await pool.query(`ALTER TABLE eventos ALTER COLUMN start_date_time TYPE TIMESTAMPTZ USING start_date_time::timestamptz`);
         await pool.query(`ALTER TABLE eventos ALTER COLUMN end_date_time TYPE TIMESTAMPTZ USING end_date_time::timestamptz`);
         console.log('Converted start_date_time/end_date_time to TIMESTAMPTZ (if needed).');
     } catch (err) {
-        // ignore if table/columns don't exist yet or conversion not needed
         console.log('No conversion needed for eventos timestamps or conversion failed:', err.message);
     }
 })();
@@ -102,30 +121,60 @@ function autenticarToken(req, res, next) {
 
 
 app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
-    const { titulo, start_date_time, end_date_time, description, color, location } = req.body;
+    const {
+        titulo,
+        start_date_time,
+        end_date_time,
+        description,
+        color,
+        location,
+        whatsappReminder,
+        whatsappOffset
+    } = req.body;
+
     const userId = req.userId;
 
     if (!titulo || titulo.trim() === "") {
         return res.status(400).json({ message: "Título é obrigatório" });
     }
-    if (!titulo || start_date_time === "" || end_date_time === "" || description === "") {
+
+    if (!start_date_time || !end_date_time || !description) {
         return res.status(400).json({ message: "Todos os campos são obrigatórios" });
     }
 
     if (new Date(start_date_time) > new Date(end_date_time)) {
-        return res.status(400).json({ message: "Data final deve ser maior ou igual à inicial" });
+        return res.status(400).json({
+            message: "Data final deve ser maior ou igual à inicial"
+        });
     }
 
     try {
+        // 1️⃣ Cria o evento
         const result = await pool.query(
-            `INSERT INTO eventos 
+            `
+        INSERT INTO eventos 
         (userId, titulo, start_date_time, end_date_time, description, color, location)
         VALUES ($1,$2,$3,$4,$5,$6,$7)
-       RETURNING *`,
+      RETURNING *
+        `,
             [userId, titulo, start_date_time, end_date_time, description, color, location]
         );
 
-        res.status(201).json(result.rows[0]);
+        const eventoCriado = result.rows[0];
+
+        // 2️⃣ Se o usuário escolheu WhatsApp, salva o lembrete
+        if (whatsappReminder === true && whatsappOffset) {
+            await pool.query(
+                `
+        INSERT INTO reminders (event_id, method, time_offset)
+        VALUES ($1, 'whatsapp', $2)
+        `,
+                [eventoCriado.id, whatsappOffset]
+            );
+        }
+
+        res.status(201).json(eventoCriado);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Erro ao criar evento" });
@@ -134,18 +183,65 @@ app.post(["/eventos", "/events"], autenticarToken, async (req, res) => {
 
 
 
+
 app.get("/eventos", autenticarToken, async (req, res) => {
     const userId = req.userId;
     const { start, end } = req.query;
 
     try {
+        // 1️⃣ Busca eventos + lembretes
         const result = await pool.query(
-            `SELECT * FROM eventos WHERE userId = $1 AND 
-        start_date_time >= $2 AND end_date_time <= $3
-        ORDER BY start_date_time ASC`,
+            `
+    SELECT 
+            e.*,
+            r.method,
+            r.time_offset
+        FROM eventos e
+        LEFT JOIN reminders r 
+            ON r.event_id = e.id AND r.method = 'whatsapp'
+        WHERE e.userId = $1
+            AND e.start_date_time >= $2
+            AND e.end_date_time <= $3
+        ORDER BY e.start_date_time ASC
+    `,
             [userId, start, end]
         );
-        res.status(200).json(result.rows);
+
+        // 2️⃣ Busca telefone do usuário
+        const userResult = await pool.query(
+            "SELECT telefone FROM usuarios WHERE id = $1",
+            [userId]
+        );
+
+        const telefoneUsuario = userResult.rows[0]?.telefone;
+
+        // 3️⃣ Monta resposta final
+        const eventosComWhatsapp = result.rows.map(event => {
+            // Se não tiver lembrete WhatsApp, retorna normal
+            if (!event.time_offset || !telefoneUsuario) {
+                return event;
+            }
+
+            // 4️⃣ Calcula horário do lembrete
+            const reminderTime = dayjs(event.start_date_time)
+                .add(event.time_offset, "minute")
+                .format("DD/MM/YYYY HH:mm");
+
+            // 5️⃣ Gera link
+            const whatsapp_link = generateWhatsAppLink({
+                phone: telefoneUsuario,
+                titulo: event.titulo,
+                reminderTime
+            });
+
+            return {
+                ...event,
+                whatsapp_link
+            };
+        });
+
+        res.status(200).json(eventosComWhatsapp);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Erro ao buscar eventos" });
@@ -228,6 +324,17 @@ app.delete("/eventos/:id", autenticarToken, async (req, res) => {
         res.status(500).json({ message: "Erro ao deletar evento!" });
     }
 });
+
+
+import agenda from './Agenda.js';
+
+(async () => {
+    await agenda.start();
+})();
+
+
+
+
 
 
 app.listen(PORT, () => {

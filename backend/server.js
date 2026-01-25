@@ -53,7 +53,7 @@ pool.query(
   )`
 );
 
-// ensure the column exists in older DBs
+
 pool.query(`ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS allday BOOLEAN DEFAULT FALSE`);
 
 
@@ -77,7 +77,7 @@ pool.query(
   )`
 );
 
-// Attempt to convert existing text columns to timestamptz if needed (safe to run)
+
 (async () => {
   try {
     await pool.query(`ALTER TABLE eventos ALTER COLUMN start_date_time TYPE TIMESTAMPTZ USING start_date_time::timestamptz`);
@@ -131,7 +131,7 @@ app.post("/register", async (req, res) => {
 
 
 app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password,email ,phone } = req.body;
   try {
     const result = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
     if (!result || result.rowCount === 0) return res.status(404).json({ message: "Usuário não encontrado!" });
@@ -246,7 +246,7 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 
 
 
-// Eventos endpoints (CRUD) - protected
+
 app.post('/eventos', autenticarToken, async (req, res) => {
   const { titulo, start_date_time, end_date_time, description, color } = req.body;
   const userId = req.userId;

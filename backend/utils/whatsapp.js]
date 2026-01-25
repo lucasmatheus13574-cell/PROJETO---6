@@ -1,0 +1,12 @@
+export function generateWhatsAppLink({ phone, titulo, reminderTime }) {
+  const message = `
+Lembrete de evento:
+${titulo}
+Horário: ${reminderTime}
+
+AdaptaTasks
+  `.trim();
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+    
