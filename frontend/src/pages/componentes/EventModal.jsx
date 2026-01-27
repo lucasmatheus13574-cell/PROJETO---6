@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Swal from 'sweetalert2';
 import '../../styles/EventModal.css';
 import { format, parse, parseISO, isValid, isBefore, startOfDay, endOfDay, add } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
+import { CalendarContext } from '../../context/CalendarContext';
+import RecurrenceForm from './RecurrenceForm';
+import ReminderForm from './ReminderForm';
 
 const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
+    const { calendars, activeCalendarId } = useContext(CalendarContext);
     const safeEvento = evento || {};
     const { title, titulo: altTitulo, description: desc, start: startVal, start_date_time, end: endVal, end_date_time, color: colorVal, mode, tipo: tipoVal, id } = safeEvento;
     const isCreate = mode === 'create';
@@ -43,6 +47,16 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
     const [priority, setPriority] = useState(safeEvento.prioridade || 'baixa');
     const [loading] = useState(false);
     const [allDay, setAllDay] = useState(safeEvento.allDay || false);
+    const [calendarId, setCalendarId] = useState(safeEvento.calendar_id || activeCalendarId || '');
+    const [recurrence, setRecurrence] = useState(safeEvento.recurrence_rule ? {
+        rule: safeEvento.recurrence_rule,
+        frequency: safeEvento.recurrence_rule.split(';')[0].split('=')[1] || 'DAILY',
+        interval: 1,
+        byDay: [],
+        endType: safeEvento.recurrence_until ? 'date' : safeEvento.recurrence_count ? 'count' : 'never',
+        endDate: safeEvento.recurrence_until ? format(new Date(safeEvento.recurrence_until), 'yyyy-MM-dd') : '',
+        count: safeEvento.recurrence_count || ''
+    } : null);
 
     // support multiple time slots in the modal UI (visual only).
     const [slots, setSlots] = useState([{ start: toLocalInput(startVal || start_date_time || new Date()), end: toLocalInput(endVal || end_date_time || startVal || start_date_time || new Date()) }]);
@@ -57,6 +71,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
         setColor(colorVal || '#3788d8');
         setPriority(safeEvento.prioridade || 'baixa');
         setAllDay(safeEvento.allDay || safeEvento.allday || false);
+        setCalendarId(safeEvento.calendar_id || activeCalendarId || '');
 
         setSlots([{ start: toLocalInput(startVal || start_date_time || new Date()), end: toLocalInput(endVal || end_date_time || startVal || start_date_time || new Date()) }]);
     }, [title, altTitulo, desc, startVal, start_date_time, endVal, end_date_time, colorVal, tipoVal, safeEvento.prioridade, safeEvento.allday, safeEvento.allDay]);
@@ -104,7 +119,11 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                 description,
                 color,
                 location,
-                allDay: !!allDay
+                allDay: !!allDay,
+                calendar_id: calendarId || undefined,
+                recurrence_rule: recurrence?.rule || undefined,
+                recurrence_until: recurrence?.endType === 'date' ? `${recurrence.endDate}T23:59:59Z` : undefined,
+                recurrence_count: recurrence?.endType === 'count' ? recurrence.count : undefined
             };
             try {
                 const result = await onSave(payload, 'evento', id);
@@ -330,20 +349,45 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
 
 
                     {tipo === 'evento' ? (
-                        <div className="event-row">
-                            <div className="event-field color-field">
-                                <label>Cor</label>
-                                <input className="event-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+                        <>
+                            <div className="event-row">
+                                <div className="event-field">
+                                    <label>Calendário</label>
+                                    <select 
+                                        className="event-input"
+                                        value={calendarId} 
+                                        onChange={(e) => setCalendarId(e.target.value)}
+                                    >
+                                        {!calendarId && <option value="">Selecionar calendário...</option>}
+                                        {calendars && calendars.map((cal) => (
+                                            <option key={cal.id} value={cal.id}>{cal.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
-                            <div className="event-field">
-                                <label>Local</label>
-                                <input className="event-input"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                    placeholder="Ex: Sala 3, Online, Auditório"
-                                />
+
+                            <div className="event-row">
+                                <div className="event-field color-field">
+                                    <label>Cor</label>
+                                    <input className="event-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+                                </div>
+                                <div className="event-field">
+                                    <label>Local</label>
+                                    <input className="event-input"
+                                        value={location}
+                                        onChange={(e) => setLocation(e.target.value)}
+                                        placeholder="Ex: Sala 3, Online, Auditório"
+                                    />
+                                </div>
                             </div>
-                        </div>
+
+                            <RecurrenceForm 
+                                onRecurrenceChange={setRecurrence}
+                                initialRecurrence={recurrence}
+                            />
+
+                            {id && <ReminderForm eventId={id} />}
+                        </>
                     ) : (
                         <div className="priority-field">
                             <div className="event-field">

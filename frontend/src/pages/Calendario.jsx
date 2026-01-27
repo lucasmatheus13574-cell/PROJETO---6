@@ -62,27 +62,7 @@ function Calendario() {
     const [eventoSelecionado, setEventoSelecionado] = useState(null);
     const rangeRef = useRef({ start: null, end: null });
     const { showEvents, showTasks } = useContext(FilterContext);
-
-
-
-    const messages = {
-        allDay: 'Dia inteiro',
-        previous: 'Anterior',
-        next: 'Próximo',
-        today: 'Hoje',
-        month: 'Mês',
-        week: 'Semana',
-        day: 'Dia',
-        agenda: 'Agenda',
-        date: 'Data',
-        time: 'Hora',
-        event: 'Evento',
-        noEventsInRange: 'Nenhum evento neste período',
-        showMore: total => `+ Ver mais (${total})`,
-    };
-
-    
-    const { currentDate, setCurrentDate, view, setView, showYearView, setShowYearView, year, setYear } = useContext(CalendarContext);
+    const { currentDate: ctxCurrentDate, setCurrentDate: ctxSetCurrentDate, view: ctxView, setView: ctxSetView, showYearView: ctxShowYearView, setShowYearView: ctxSetShowYearView, year: ctxYear, setYear: ctxSetYear, visibleCalendars } = useContext(CalendarContext);
 
 
 
@@ -133,7 +113,9 @@ function Calendario() {
             if (!resTasks.ok) throw new Error('Erro ao buscar tarefas');
             const tasksData = await resTasks.json();
 
-            const mappedEvents = eventsData.map(mapRowToEvent);
+            const mappedEvents = eventsData
+                .filter(e => !e.calendar_id || visibleCalendars.includes(e.calendar_id))
+                .map(mapRowToEvent);
             const mappedTasks = tasksData.map((t) => ({
                 id: t.id,
                 title: t.tarefa,
@@ -170,7 +152,7 @@ function Calendario() {
             console.error('Erro na requisição de eventos/tarefas:', err);
             Swal.fire('Erro', 'Não foi possível carregar os itens', 'error');
         }
-    }, [URL_API, token, showEvents, showTasks]);
+    }, [URL_API, token, showEvents, showTasks, visibleCalendars]);
 
     useEffect(() => {
         const start = startOfMonth(new Date()).toISOString();
@@ -181,12 +163,12 @@ function Calendario() {
     }, [fetchEvents]);
 
     useEffect(() => {
-        const start = startOfMonth(currentDate).toISOString();
-        const end = endOfMonth(currentDate).toISOString();
+        const start = startOfMonth(ctxCurrentDate).toISOString();
+        const end = endOfMonth(ctxCurrentDate).toISOString();
 
         rangeRef.current = { start, end };
         fetchEvents(start, end);
-    }, [currentDate, fetchEvents]);
+    }, [ctxCurrentDate, fetchEvents]);
     useEffect(() => {
 
         const { start, end } = rangeRef.current;
@@ -224,13 +206,13 @@ function Calendario() {
         });
     };
 
-    const prevYear = () => setYear((y) => y - 1);
-    const nextYear = () => setYear((y) => y + 1);
+    const prevYear = () => ctxSetYear((y) => y - 1);
+    const nextYear = () => ctxSetYear((y) => y + 1);
     const selectMonth = (monthIndex) => {
-        const date = new Date(year, monthIndex, 1);
+        const date = new Date(ctxYear, monthIndex, 1);
 
-        setCurrentDate(date);
-        setShowYearView(false);
+        ctxSetCurrentDate(date);
+        ctxSetShowYearView(false);
 
         const start = startOfMonth(date).toISOString();
         const end = endOfMonth(date).toISOString();
@@ -445,13 +427,13 @@ function Calendario() {
 
                 <div className='calendar-wrapper'>
 
-                    {showYearView ? (
+                    {ctxShowYearView ? (
                         <CalendarYearView
-                            year={year}
+                            year={ctxYear}
                             onPrevYear={prevYear}
                             onNextYear={nextYear}
                             onSelectMonth={selectMonth}
-                            onClose={() => setShowYearView(false)}
+                            onClose={() => ctxSetShowYearView(false)}
                             onDayClick={async (date) => {
 
                                 try {
@@ -497,9 +479,9 @@ function Calendario() {
                                     });
 
                                     if (isConfirmed) {
-                                        setCurrentDate(date);
-                                        setShowYearView(false);
-                                        setView('day');
+                                        ctxSetCurrentDate(date);
+                                        ctxSetShowYearView(false);
+                                        ctxSetView('day');
 
                                         const s = startOfMonth(date).toISOString();
                                         const e = endOfMonth(date).toISOString();
@@ -516,10 +498,10 @@ function Calendario() {
                         />
                 ) : (
                     <DragAndDropCalendar
-                    date={currentDate}
-                    view={view}
-                    onView={(v) => setView(v)}
-                    onNavigate={(date) => { setCurrentDate(date); const s = startOfMonth(date).toISOString(); const e = endOfMonth(date).toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); }}
+                    date={ctxCurrentDate}
+                    view={ctxView}
+                    onView={(v) => ctxSetView(v)}
+                    onNavigate={(date) => { ctxSetCurrentDate(date); const s = startOfMonth(date).toISOString(); const e = endOfMonth(date).toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); }}
                     defaultView="month"
                     views={['month', 'week', 'day']}
                     events={eventos}

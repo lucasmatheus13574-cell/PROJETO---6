@@ -4,6 +4,7 @@ import '../../styles/SideBar.css';
 import { FilterContext } from '../../context/FilterContextValue';
 import MiniMap from './MiniMap';
 import { CalendarContext } from '../../context/CalendarContext';
+import CalendarManager from './CalendarManager';
 
 function Sidebar() {
     const [open, setOpen] = useState(true);
@@ -37,6 +38,11 @@ function Sidebar() {
                 <label className="filter-row">
                     <input type="checkbox" checked={showTasks} onChange={(e) => setShowTasks(e.target.checked)} /> Tarefas
                 </label>
+            </div>
+
+            <div className="sidebar-calendars">
+                <h3>Meus Calendários</h3>
+                <CalendarManager />
             </div>
 
             <div className="sidebar-minimap">
