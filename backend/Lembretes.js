@@ -8,19 +8,19 @@ app.get("/lembretes", autenticarToken, async (req, res) => {
         // 1️⃣ Busca lembretes
         const result = await pool.query(
             `
-      SELECT
+        SELECT
         r.id AS reminder_id,
         r.method,
         r.time_offset,
         e.titulo,
         e.start_date_time,
         e.id AS event_id
-      FROM reminders r
-      JOIN eventos e ON e.id = r.event_id
-      WHERE e.userId = $1
+        FROM reminders r
+        JOIN eventos e ON e.id = r.event_id
+        WHERE e.userId = $1
         AND r.method = 'whatsapp'
-      ORDER BY e.start_date_time ASC
-      `,
+        ORDER BY e.start_date_time ASC
+    `,
             [userId]
         );
 
@@ -45,7 +45,7 @@ app.get("/lembretes", autenticarToken, async (req, res) => {
                     ? generateWhatsAppLink({
                         phone: telefone,
                         titulo: item.titulo,
-                        reminderTime    
+                        reminderTime
                     })
                     : null
             };
