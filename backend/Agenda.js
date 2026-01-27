@@ -1,5 +1,6 @@
-import Agenda from 'agenda';
-import axios from 'axios';
+﻿const Agenda = require('agenda');
+const axios = require('axios');
+require('dotenv').config();
 
 const agenda = new Agenda({
     db: {
@@ -7,7 +8,6 @@ const agenda = new Agenda({
         collection: 'agendaJobs'
     }
 });
-
 
 agenda.define('send whatsapp reminder', async job => {
     const {
@@ -18,19 +18,18 @@ agenda.define('send whatsapp reminder', async job => {
         minutesBefore
     } = job.attrs.data;
 
-    await axios.post(process.env.N8N_WEBHOOK_URL, {
-        nome,
-        telefone,
-        evento,
-        dataEvento,
-        minutesBefore
-    });
+    try {
+        await axios.post(process.env.N8N_WEBHOOK_URL, {
+            nome,
+            telefone,
+            evento,
+            dataEvento,
+            minutesBefore
+        });
+        console.log(WhatsApp reminder sent to );
+    } catch (error) {
+        console.error('Error sending WhatsApp reminder:', error.message);
+    }
 });
 
-
-
-
-
-
-
-export default agenda;
+module.exports = agenda;

@@ -9,6 +9,8 @@ function Register() {
     const [password, setPassword] = useState("");
     const [confirmpassword, setConfirmPassword] = useState("");
     const [mensagem, setMensagem] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
     
     const URL_API  =  import.meta.env.VITE_API_URL;   
 
@@ -16,7 +18,7 @@ function Register() {
         const response = await fetch(`${URL_API}/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password, confirmpassword })
+            body: JSON.stringify({ username, password, confirmpassword, email, phone })
         });
 
         const data = await response.json();
@@ -41,6 +43,12 @@ function Register() {
 
             <input type="password" placeholder="Confirmar Senha"
                 value={confirmpassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+
+            <input type="email" placeholder="Email"
+                value={email} onChange={(e) => setEmail(e.target.value)} />
+
+            <input type="tel" placeholder="Telefone"
+                value={phone} onChange={(e) => setPhone(e.target.value)} />
 
             <button onClick={registrar}>Registrar</button>
 

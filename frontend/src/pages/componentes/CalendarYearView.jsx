@@ -30,7 +30,7 @@ export default function CalendarYearView({ year, onPrevYear, onNextYear, onClose
     }
 
     const handleMonthClick = (idx) => {
-        // Expand the month so the user can pick a day
+
         setExpandedMonth(idx);
     }
 

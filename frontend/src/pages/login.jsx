@@ -10,28 +10,39 @@ function Login() {
     const [mensagem, setMensagem] = useState("");
 
 
+
     const URL_API  =  import.meta.env.VITE_API_URL;          
 
     
 
 
     const logar = async ()  => {
-        const response = await fetch(`${URL_API}/login`, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify({ username, password })
-        });
-        
-        const data = await response.json();
-        setMensagem(data.message);
+        if (!username.trim() || !password.trim()) {
+            setMensagem("Preencha todos os campos");
+            return;
+        }
 
-        if (data.token) {
-            localStorage.setItem("token", data.token);
-            if (data.events) localStorage.setItem("events", JSON.stringify(data.events));
-            navigate("/eventos");
+        try {
+            const response = await fetch(`${URL_API}/login`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            setMensagem(data.message);
+
+            if (data.token) {
+                localStorage.setItem("token", data.token);
+                if (data.events) localStorage.setItem("events", JSON.stringify(data.events));
+                if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
+                navigate("/eventos");
+            }
+        } catch (err) {
+            console.error("Erro de conexão:", err);
+            setMensagem("Erro ao conectar com servidor");
         }
     };
 

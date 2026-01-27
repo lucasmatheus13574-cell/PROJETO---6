@@ -8,7 +8,7 @@
   --shadow-strong: 0 6px 16px rgba(26,115,232,0.12);
 }
 
-/* Buttons */
+
 .btn-primary {
   background: var(--primary);
   color: #fff;
@@ -42,6 +42,6 @@
   cursor: pointer;
 }
 
-/* Small helpers */
+
 .muted { color: var(--muted); }
 .rounded { border-radius: var(--radius); }

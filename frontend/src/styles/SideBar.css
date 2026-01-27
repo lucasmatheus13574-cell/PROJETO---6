@@ -26,7 +26,7 @@
     justify-content: space-between;
 }
 
-/* Mobile: make sidebar overlay and hide by default */
+
 @media (max-width: 768px) {
     .layout {
         flex-direction: column;
@@ -51,14 +51,13 @@
         padding-top: 12px;
     }
 
-    /* show a small toggle button fixed to the top-left when closed */
     .sidebar-toggle {
         position: relative;
         z-index: 10001;
     }
 }
 
-/* Medium screens: slightly reduce sidebar width */
+
 @media (min-width: 769px) and (max-width: 1024px) {
     .sidebar {
         width: 200px;

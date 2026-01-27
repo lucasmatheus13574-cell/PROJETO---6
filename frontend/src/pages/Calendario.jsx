@@ -81,7 +81,7 @@ function Calendario() {
         showMore: total => `+ Ver mais (${total})`,
     };
 
-    // view controls from CalendarContext
+    
     const { currentDate, setCurrentDate, view, setView, showYearView, setShowYearView, year, setYear } = useContext(CalendarContext);
 
 
@@ -119,7 +119,6 @@ function Calendario() {
         }
 
         try {
-            // fetch eventos
             const params = new URLSearchParams();
             if (startDate) params.append('start', startDate);
             if (endDate) params.append('end', endDate);
@@ -154,7 +153,6 @@ function Calendario() {
             if (showEvents) combined = combined.concat(mappedEvents);
             if (showTasks) combined = combined.concat(mappedTasks);
 
-            // Sort: by day, and place 'allday' tarefas at the top of the same day
             combined.sort((a, b) => {
                 const aDay = startOfDay(a.start).getTime();
                 const bDay = startOfDay(b.start).getTime();
@@ -182,7 +180,6 @@ function Calendario() {
         fetchEvents(start, end);
     }, [fetchEvents]);
 
-    // Refetch when currentDate changes (e.g., via mini calendar or navigation)
     useEffect(() => {
         const start = startOfMonth(currentDate).toISOString();
         const end = endOfMonth(currentDate).toISOString();
@@ -446,107 +443,122 @@ function Calendario() {
             <div className="calendar-container">
 
 
+                <div className='calendar-wrapper'>
 
-                {showYearView ? (
-                    <CalendarYearView
-                        year={year}
-                        onPrevYear={prevYear}
-                        onNextYear={nextYear}
-                        onSelectMonth={selectMonth}
-                        onClose={() => setShowYearView(false)}
-                        onDayClick={async (date) => {
-                            // Fetch events and tasks for the clicked day and show a preview modal
-                            try {
-                                const start = endOfDay(new Date(date).utc().startOf('day').toISOString());
-                                const end = startOfDay(new Date(date).utc().endOf('day').toISOString());
+                    {showYearView ? (
+                        <CalendarYearView
+                            year={year}
+                            onPrevYear={prevYear}
+                            onNextYear={nextYear}
+                            onSelectMonth={selectMonth}
+                            onClose={() => setShowYearView(false)}
+                            onDayClick={async (date) => {
 
-                                // eventos for day
-                                const urlEvents = `${URL_API}/eventos?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
-                                const resEvents = await fetch(urlEvents, { headers: { 'authorization': `Bearer ${token}` } });
-                                const eventsData = resEvents.ok ? await resEvents.json() : [];
+                                try {
+                                    const start = endOfDay(new Date(date).utc().startOf('day').toISOString());
+                                    const end = startOfDay(new Date(date).utc().endOf('day').toISOString());
 
-                                // tarefas (filter by date)
-                                const resTasks = await fetch(`${URL_API}/tarefas`, { headers: { 'authorization': `Bearer ${token}` } });
-                                const tasksData = resTasks.ok ? await resTasks.json() : [];
-                                const tasksForDay = tasksData.filter(t => t.data && isSameDay(parseISO(t.data), date))
+                                    const urlEvents = `${URL_API}/eventos?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+                                    const resEvents = await fetch(urlEvents, { headers: { 'authorization': `Bearer ${token}` } });
+                                    const eventsData = resEvents.ok ? await resEvents.json() : [];
+
+                                    const resTasks = await fetch(`${URL_API}/tarefas`, { headers: { 'authorization': `Bearer ${token}` } });
+                                    const tasksData = resTasks.ok ? await resTasks.json() : [];
+                                    const tasksForDay = tasksData.filter(t => t.data && isSameDay(parseISO(t.data), date))
 
 
-                                const items = [];
-                                (eventsData || []).forEach(ev => items.push({ type: 'evento', title: ev.titulo || ev.title, start: ev.start_date_time, end: ev.end_date_time }));
-                                tasksForDay.forEach(t => items.push({ type: 'tarefa', title: t.tarefa, start: t.data, end: t.data }));
+                                    const items = [];
+                                    (eventsData || []).forEach(ev => items.push({ type: 'evento', title: ev.titulo || ev.title, start: ev.start_date_time, end: ev.end_date_time }));
+                                    tasksForDay.forEach(t => items.push({ type: 'tarefa', title: t.tarefa, start: t.data, end: t.data }));
 
-                                let html = '<div style="text-align:left">';
-                                if (items.length === 0) html += '<div>Nenhum evento ou tarefa neste dia.</div>';
-                                else {
-                                    html += '<ul style="padding-left:16px;">';
-                                    items.forEach(it => {
-                                        if (it.type === 'evento') {
-                                            const time = it.start ? format(parseISO(it.start), 'HH:mm', { locale: ptBR }) + ' - ' + format(parseISO(it.end), 'HH:mm', { locale: ptBR }) : '';
-                                            html += `<li><strong>${time}</strong> ${it.title}</li>`;
-                                        } else {
-                                            html += `<li><strong>Tarefa</strong> ${it.title}</li>`;
-                                        }
+                                    let html = '<div style="text-align:left">';
+                                    if (items.length === 0) html += '<div>Nenhum evento ou tarefa neste dia.</div>';
+                                    else {
+                                        html += '<ul style="padding-left:16px;">';
+                                        items.forEach(it => {
+                                            if (it.type === 'evento') {
+                                                const time = it.start ? format(parseISO(it.start), 'HH:mm', { locale: ptBR }) + ' - ' + format(parseISO(it.end), 'HH:mm', { locale: ptBR }) : '';
+                                                html += `<li><strong>${time}</strong> ${it.title}</li>`;
+                                            } else {
+                                                html += `<li><strong>Tarefa</strong> ${it.title}</li>`;
+                                            }
+                                        });
+                                        html += '</ul>';
+                                    }
+                                    html += '</div>';
+
+                                    const { isConfirmed } = await Swal.fire({
+                                        title: format(date, "EEEE, d 'de' MMMM yyyy", { locale: ptBR }),
+                                        html,
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Abrir dia',
+                                        cancelButtonText: 'Fechar',
+                                        width: 520
                                     });
-                                    html += '</ul>';
+
+                                    if (isConfirmed) {
+                                        setCurrentDate(date);
+                                        setShowYearView(false);
+                                        setView('day');
+
+                                        const s = startOfMonth(date).toISOString();
+                                        const e = endOfMonth(date).toISOString();
+
+                                        rangeRef.current = { start: s, end: e };
+                                        fetchEvents(s, e);
+                                    }
+
+                                } catch (err) {
+                                    console.error('Erro ao carregar dia:', err);
+                                    Swal.fire('Erro', 'Não foi possível carregar os itens desse dia', 'error');
                                 }
-                                html += '</div>';
-
-                                const { isConfirmed } = await Swal.fire({
-                                    title: format(date, "EEEE, d 'de' MMMM yyyy", { locale: ptBR }),
-                                    html,
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Abrir dia',
-                                    cancelButtonText: 'Fechar',
-                                    width: 520
-                                });
-
-                                if (isConfirmed) {
-                                    // Open day view
-                                    setCurrentDate(date);
-                                    setShowYearView(false);
-                                    setView('day');
-
-                                    const s = startOfMonth(date).toISOString();
-                                    const e = endOfMonth(date).toISOString();
-
-                                    rangeRef.current = { start: s, end: e };
-                                    fetchEvents(s, e);
-                                }
-
-                            } catch (err) {
-                                console.error('Erro ao carregar dia:', err);
-                                Swal.fire('Erro', 'Não foi possível carregar os itens desse dia', 'error');
-                            }
-                        }}
-                    />
+                            }}
+                        />
                 ) : (
                     <DragAndDropCalendar
-                        date={currentDate}
-                        view={view}
-                        onView={(v) => setView(v)}
-                        onNavigate={(date) => { setCurrentDate(date); const s = startOfMonth(date).toISOString(); const e = endOfMonth(date).toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); }}
-                        defaultView="month"
-                        views={['month', 'week', 'day']}
-                        events={eventos}
-                        localizer={localizer}
-                        messages={messages}
-                        resizable
-                        onEventDrop={MoverEvent}
-                        onEventResize={MoverEvent}
-                        onSelectEvent={handleEventClick}
-                        onRangeChange={handleRangeChange}
-                        selectable
-                        onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
-                        eventPropGetter={eventPropGetter}
-                        components={{
-                            month: { header: CustomWeekdayHeader },
-                            toolbar: CustomToolbar,
-                            event: EventTooltip
-                        }}
-                        className="calendar"
-                    />
+                    date={currentDate}
+                    view={view}
+                    onView={(v) => setView(v)}
+                    onNavigate={(date) => { setCurrentDate(date); const s = startOfMonth(date).toISOString(); const e = endOfMonth(date).toISOString(); rangeRef.current = { start: s, end: e }; fetchEvents(s, e); }}
+                    defaultView="month"
+                    views={['month', 'week', 'day']}
+                    events={eventos}
+                    localizer={localizer}
+                    messages={messages}
+                    resizable
+                    onEventDrop={MoverEvent}
+                    onEventResize={MoverEvent}
+                    onSelectEvent={handleEventClick}
+                    onRangeChange={handleRangeChange}
+                    selectable
+                    onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
+                    eventPropGetter={eventPropGetter}
+                    formats={{
+
+                        weekdayFormat: (date) => {
+                            const s = format(date, 'EEEE', { locale: ptBR });
+                            return s.charAt(0).toUpperCase() + s.slice(1);
+                        },
+
+                        dayHeaderFormat: (date) => {
+                            const s = format(date, "EEEE d", { locale: ptBR });
+                            return s.charAt(0).toUpperCase() + s.slice(1);
+                        },
+
+                        dayFormat: (date) => {
+                            const s = format(date, "EEEE d", { locale: ptBR });
+                            return s.charAt(0).toUpperCase() + s.slice(1);
+                        }
+                    }}
+                    components={{
+                        month: { header: CustomWeekdayHeader },
+                        toolbar: CustomToolbar,
+                        event: EventTooltip
+                    }}
+                    className="calendar"
+                />
                 )}
-            </div>
+                </div>
 
             {eventoSelecionado && (
                 <EventModal
@@ -558,7 +570,8 @@ function Calendario() {
                 />
             )}
         </div>
-    )
+    </div>
+    );
 }
 
 export default Calendario;

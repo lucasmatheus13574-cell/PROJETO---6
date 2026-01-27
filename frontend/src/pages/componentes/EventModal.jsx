@@ -10,17 +10,17 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
     const isCreate = mode === 'create';
 
     const toLocalInput = (val) => {
-        // produce a local datetime string 'yyyy-MM-ddTHH:mm'
+
         if (!val) return format(new Date(), "yyyy-MM-dd'T'HH:mm");
         if (val instanceof Date) return format(val, "yyyy-MM-dd'T'HH:mm");
         if (typeof val === 'string') {
-            // Try ISO parse first
+
             const parsed = parseISO(val);
             if (isValid(parsed)) return format(parsed, "yyyy-MM-dd'T'HH:mm");
-            // fallback to parsing a local datetime string
+
             const p = parse(val, "yyyy-MM-dd'T'HH:mm", new Date());
             if (isValid(p)) return format(p, "yyyy-MM-dd'T'HH:mm");
-            // last resort
+
             const d = new Date(val);
             return format(d, "yyyy-MM-dd'T'HH:mm");
         }
@@ -57,7 +57,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
         setColor(colorVal || '#3788d8');
         setPriority(safeEvento.prioridade || 'baixa');
         setAllDay(safeEvento.allDay || safeEvento.allday || false);
-        // initialize slots to reflect current start/end
+
         setSlots([{ start: toLocalInput(startVal || start_date_time || new Date()), end: toLocalInput(endVal || end_date_time || startVal || start_date_time || new Date()) }]);
     }, [title, altTitulo, desc, startVal, start_date_time, endVal, end_date_time, colorVal, tipoVal, safeEvento.prioridade, safeEvento.allday, safeEvento.allDay]);
 
@@ -72,7 +72,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
             return;
         }
 
-        // Use the first slot for saving the event's start/end
+
         const slotStart = slots[0]?.start || start;
         const slotEnd = slots[0]?.end || end;
 
@@ -236,7 +236,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                         <textarea className="event-textarea" value={description} onChange={(e) => setDescription(e.target.value)} />
                     </div>
 
-                                    {tipo === 'tarefa' ? (
+                    {tipo === 'tarefa' ? (
                         <div className="event-field">
                             <label>Data</label>
                             <input
@@ -255,52 +255,51 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                                     <span style={{ fontWeight: 600, color: '#374151' }}>Dia inteiro</span>
                                 </label>
 
-                                {/* show a small helper only when creating */}
                                 {isCreate && <small style={{ color: '#6b7280' }}>Marque para criar tarefa no dia inteiro</small>}
                             </div>
                         </div>
                     ) : (
                         <div className="event-times">
-<div className="date-block">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
+                            <div className="date-block">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
 
-                                    {!allDay ? (
-                                        <div className="times-list">
-                                            {slots.map((s, idx) => (
-                                                <div className="time-row" key={idx}>
-                                                    <div className="time-block">
-                                                        <input className="time-input" type="time" value={format(parse(s.start, "yyyy-MM-dd'T'HH:mm", new Date()), 'HH:mm')} onChange={(e) => {
-                                                            const newSlots = [...slots];
-                                                            const datePart = format(parse(s.start, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd');
-                                                            const newStart = `${datePart}T${e.target.value}`;
-                                                            newSlots[idx].start = newStart;
-                                                            setSlots(newSlots);
+                            {!allDay ? (
+                                <div className="times-list">
+                                    {slots.map((s, idx) => (
+                                        <div className="time-row" key={idx}>
+                                            <div className="time-block">
+                                                <input className="time-input" type="time" value={format(parse(s.start, "yyyy-MM-dd'T'HH:mm", new Date()), 'HH:mm')} onChange={(e) => {
+                                                    const newSlots = [...slots];
+                                                    const datePart = format(parse(s.start, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd');
+                                                    const newStart = `${datePart}T${e.target.value}`;
+                                                    newSlots[idx].start = newStart;
+                                                    setSlots(newSlots);
                                                 }} />
-                                                    </div>
+                                            </div>
 
-                                                    <div className="dash">—</div>
+                                            <div className="dash">—</div>
 
-                                                    <div className="time-block">
-                                                        <input className="time-input" type="time" value={format(parse(s.end, "yyyy-MM-dd'T'HH:mm", new Date()), 'HH:mm')} onChange={(e) => {
-                                                            const newSlots = [...slots];
-                                                            const datePart = format(parse(s.end, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd');
-                                                            const newEnd = `${datePart}T${e.target.value}`;
-                                                            newSlots[idx].end = newEnd;
-                                                            setSlots(newSlots);
-                                                        }} />
-                                                    </div>
+                                            <div className="time-block">
+                                                <input className="time-input" type="time" value={format(parse(s.end, "yyyy-MM-dd'T'HH:mm", new Date()), 'HH:mm')} onChange={(e) => {
+                                                    const newSlots = [...slots];
+                                                    const datePart = format(parse(s.end, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd');
+                                                    const newEnd = `${datePart}T${e.target.value}`;
+                                                    newSlots[idx].end = newEnd;
+                                                    setSlots(newSlots);
+                                                }} />
+                                            </div>
 
-                                                    {idx > 0 && <button className="remove-slot" onClick={() => setSlots(slots.filter((_, i) => i !== idx))}>Remover</button>}
-                                                </div>
-                                            ))}
+                                            {idx > 0 && <button className="remove-slot" onClick={() => setSlots(slots.filter((_, i) => i !== idx))}>Remover</button>}
+                                        </div>
+                                    ))}
 
-                                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                                                <div className="date-summary" style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-                                                    <div className="summary-card">
-                                                        <div className="summary-title">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
-                                                        <div className="summary-sub">Não se repete</div>
-                                                    </div>
-                                                    <div style={{ marginLeft: 'auto' }}>
-                                                        <button className="add-time-btn primary" onClick={() => setSlots([...slots, { start: slots[slots.length-1].end, end: format(add(parse(slots[slots.length-1].end, "yyyy-MM-dd'T'HH:mm", new Date()), { hours: 1 }), "yyyy-MM-dd'T'HH:mm") }])}>Adicionar horário</button>
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                                        <div className="date-summary" style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                                            <div className="summary-card">
+                                                <div className="summary-title">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
+                                                <div className="summary-sub">Não se repete</div>
+                                            </div>
+                                            <div style={{ marginLeft: 'auto' }}>
+                                                <button className="add-time-btn primary" onClick={() => setSlots([...slots, { start: slots[slots.length - 1].end, end: format(add(parse(slots[slots.length - 1].end, "yyyy-MM-dd'T'HH:mm", new Date()), { hours: 1 }), "yyyy-MM-dd'T'HH:mm") }])}>Adicionar horário</button>
                                             </div>
                                         </div>
                                     </div>
@@ -361,7 +360,7 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
 
                 <div className="event-modal-footer">
                     <div className="footer-left">
-                        {/* show conclude only for tarefa and in edit mode */}
+
                         {!isCreate && tipo === 'tarefa' && onConclude && !safeEvento.concluida && (
                             <button className="btn-secondary" onClick={handleConclude}>Concluir</button>
                         )}

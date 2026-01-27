@@ -7,9 +7,9 @@ export default function MiniMap({ currentDate, onSelectDate }) {
     const m = currentDate instanceof Date ? currentDate : new Date(currentDate);
     const start = startOfMonth(m);
     const end = endOfMonth(m);
-    let days = []; // will be filled with weeks of 7 days
+    let days = []; 
 
-    // build weeks (Sunday first)
+
     days = [];
     let day = startOfWeek(start, { weekStartsOn: 0 });
     const endOfGrid = endOfWeek(end, { weekStartsOn: 0 });

@@ -3,14 +3,16 @@ import Swal from "sweetalert2";
 import { CalendarContext } from "../../context/CalendarContext";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "../../styles/Calendarios.css";
+import "../../styles/lembretes.css";
 import { format } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
+
 
 export default function CustomToolbar({  onNavigate, onView, view }) {
     const { currentDate, setCurrentDate, setView, showYearView, setShowYearView } = useContext(CalendarContext);
 
     const navigate = (action) => {
-        // react-big-calendar will understand actions like 'TODAY','PREV','NEXT'
+
         if (action === 'TODAY') {
             setCurrentDate(new Date());
             onNavigate && onNavigate('TODAY');
@@ -21,7 +23,7 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
 
     const handleView = (v) => {
         if (v === 'year') {
-            // our app supports a separate year view toggle
+
             setShowYearView(s => !s);
         } else {
             setShowYearView(false);
@@ -52,6 +54,9 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
             }
         });
     };
+    const lembretes = () => {
+        window.location.href = "/lembretes";
+    }
 
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -74,8 +79,9 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
         { value: 'year', label: 'Ano',  shortcut: 'Y' }
     ];
 
-    const formattedLabel = format(currentDate, 'MMMM yyyy', { locale: ptBR });
-    const displayLabel = formattedLabel.charAt(0).toUpperCase() + formattedLabel.slice(1);
+    const monthYear = format(currentDate || new Date(), 'MMMM yyyy', { locale: ptBR });
+    const dayNum = format(currentDate || new Date(), 'd', { locale: ptBR });
+    const displayLabel = `${dayNum} ${monthYear.charAt(0).toUpperCase() + monthYear.slice(1)}`;
 
     return (
         <div className="rbc-toolbar custom-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
@@ -104,6 +110,7 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
                 )}
 
                 <button className="logout-btn" onClick={logout}>🚪 Logout</button>
+                <button className=".btn-reminders" onClick={lembretes}>  Meus Lembretes</button>
             </div>
         </div>
     );

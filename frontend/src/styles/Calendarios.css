@@ -20,7 +20,7 @@
     align-items: center;
 }
 
-/* Make the calendar shorter on small devices to leave room for header/footer */
+
 @media (max-width: 768px) {
     .calendar {
         height: 60vh;
@@ -34,7 +34,7 @@
         gap: 6px;
     }
 
-    /* Modal: stack rows vertically */
+
     .event-modal {
         width: 96%;
         max-width: 96%;
@@ -66,7 +66,7 @@
     }
 }
 
-/* Slightly larger small screen adjustments */
+
 @media (min-width: 769px) and (max-width: 1024px) {
     .calendar {
         height: 75vh;
@@ -191,18 +191,14 @@
 
 
 
-/* Modal styles moved to `src/styles/EventModal.css` */
 
-/* event-modal header moved to EventModal.css */
-
-/* modal title styles moved to EventModal.css */
 
 .event-modal-body {
     padding: 28px 32px;
     display: flex;
     flex-direction: column;
     gap: 28px;
-} 
+}
 
 
 
@@ -211,7 +207,7 @@
     flex-direction: column;
     gap: 12px;
     margin-bottom: 16px;
-} 
+}
 
 .event-field label {
     font-size: 13px;
@@ -227,6 +223,7 @@
         opacity: 0;
         transform: translateY(8px) scale(0.98);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -234,18 +231,15 @@
 }
 
 
-/* modal close button moved to EventModal.css */
 
-/* event-row grid moved to EventModal.css for modal layout */
-
-/* Inputs moved to EventModal.css (scoped) */ 
-
-/* event color input moved to EventModal.css */
-
-/* ensure paddings on small screens */
 @media (max-width: 768px) {
-    .event-modal-body { padding: 18px; }
-    .event-row { gap: 12px; }
+    .event-modal-body {
+        padding: 18px;
+    }
+
+    .event-row {
+        gap: 12px;
+    }
 }
 
 .event-input:focus,
@@ -255,10 +249,7 @@
     box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
 }
 
-/* Footer & button styles moved to shared styles (`ui.css`) and modal styles (`EventModal.css`) */
 
-
-/* Footer & button styles moved to shared styles (`ui.css`) and modal styles (`EventModal.css`) */
 
 .logout-btn {
     background-color: #ff4d4d;
@@ -298,11 +289,17 @@
 }
 
 @media (max-width: 768px) {
-    .calendar-topbar { flex-direction: column; align-items: stretch }
-    .calendar-topbar .minimap { display: none }
+    .calendar-topbar {
+        flex-direction: column;
+        align-items: stretch
+    }
+
+    .calendar-topbar .minimap {
+        display: none
+    }
 }
 
-/* ANIMATION */
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -315,7 +312,7 @@
     }
 }
 
-/* react-big-calendar toolbar styles */
+
 .rbc-toolbar.custom-toolbar {
     background: #fff;
     border-bottom: 1px solid #e6e6e6;
@@ -337,7 +334,7 @@
     gap: 8px;
 }
 
-/* View dropdown pill */
+
 .view-toggle {
     display: inline-flex;
     align-items: center;
@@ -349,12 +346,12 @@
     border: none;
     cursor: pointer;
     font-weight: 600;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
 .view-toggle .caret {
     font-size: 12px;
-    color: rgba(255,255,255,0.9);
+    color: rgba(255, 255, 255, 0.9);
     transition: transform 0.15s ease;
 }
 
@@ -369,7 +366,7 @@
     background: #fff;
     color: #000;
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     min-width: 200px;
     z-index: 60;
     overflow: hidden;
@@ -387,19 +384,21 @@
     cursor: pointer;
     text-align: left;
     font-size: 15px;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .view-dropdown-item:last-child {
     border-bottom: none;
-    background: rgba(255,255,255,0.02);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .view-dropdown-item:hover {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
 }
 
-.item-label { margin-right: 12px; }
+.item-label {
+    margin-right: 12px;
+}
 
 .item-shortcut {
     opacity: 0.55;
@@ -409,17 +408,61 @@
 
 /* Small screens: compress toolbar */
 @media (max-width: 600px) {
-    .rbc-toolbar.custom-toolbar { padding: 8px; }
-    .rbc-toolbar .btn-secondary { padding: 6px 8px; font-size: 13px; }
-    .rbc-toolbar .custom-nav > div { display: none; }
-    .view-toggle { padding: 6px 10px; font-size: 13px; }
+    .rbc-toolbar.custom-toolbar {
+        padding: 8px;
+    }
+
+    .rbc-toolbar .btn-secondary {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+
+    .rbc-toolbar .custom-nav>div {
+        display: none;
+    }
+
+    .view-toggle {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
 }
 
-/* Small screens: compress toolbar */
+
 @media (max-width: 600px) {
-    .rbc-toolbar.custom-toolbar { padding: 8px; }
-    .rbc-toolbar .btn-secondary { padding: 6px 8px; font-size: 13px; }
-    .rbc-toolbar .custom-nav > div { display: none; }
-    .view-toggle { padding: 6px 10px; font-size: 13px; }
+    .rbc-toolbar.custom-toolbar {
+        padding: 8px;
+    }
+
+    .rbc-toolbar .btn-secondary {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+
+    .rbc-toolbar .custom-nav>div {
+        display: none;
+    }
+
+    .view-toggle {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
 }
 
+.calendar-wrapper {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Ensure weekday headers display Portuguese names fully and wrap if needed */
+.rbc-header, .rbc-day-header, .rbc-date-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    white-space: normal;
+    line-height: 1.1;
+    font-size: 13px;
+    padding: 6px 4px;
+}
