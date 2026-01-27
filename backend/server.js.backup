@@ -1,0 +1,358 @@
+const express = require("express");
+const cors = require("cors");
+const bcryptjs = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+const { Pool } = require("pg");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+
+
+const URL_FRONTEND = process.env.FRONTEND_URL;
+
+const app = express();
+
+
+const corsOptions = URL_FRONTEND ? { origin: URL_FRONTEND, credentials: true } : { origin: true, credentials: true };
+app.use(cors(corsOptions));
+
+app.use(express.json());
+
+const PORT = process.env.PORT || 3000;
+const SECRET = process.env.JWT_SECRET;
+
+
+
+
+pool.query(
+  `CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE,
+      password TEXT
+  )`
+);
+
+
+pool.query(
+  `CREATE TABLE IF NOT EXISTS tarefas (
+      id SERIAL PRIMARY KEY,
+      userId INTEGER,
+      tarefa TEXT UNIQUE NOT NULL,
+      data TEXT,
+      prioridade TEXT,
+      concluida INTEGER DEFAULT 0,
+      allday BOOLEAN DEFAULT FALSE,
+      FOREIGN KEY(userId) REFERENCES users(id)
+  )`
+);
+
+
+pool.query(`ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS allday BOOLEAN DEFAULT FALSE`);
+
+
+
+
+
+
+
+pool.query("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS tipo TEXT");
+
+pool.query(
+  `CREATE TABLE IF NOT EXISTS eventos (
+      id SERIAL PRIMARY KEY,
+      userId INTEGER,
+      titulo TEXT,
+      start_date_time TIMESTAMPTZ,
+      end_date_time TIMESTAMPTZ,
+      description TEXT,
+      color TEXT,
+      FOREIGN KEY(userId) REFERENCES users(id)
+  )`
+);
+
+
+(async () => {
+  try {
+    await pool.query(`ALTER TABLE eventos ALTER COLUMN start_date_time TYPE TIMESTAMPTZ USING start_date_time::timestamptz`);
+    await pool.query(`ALTER TABLE eventos ALTER COLUMN end_date_time TYPE TIMESTAMPTZ USING end_date_time::timestamptz`);
+    console.log('Converted start_date_time/end_date_time to TIMESTAMPTZ (if needed).');
+  } catch (err) {
+    console.log('No conversion needed for eventos timestamps or conversion failed:', err.message);
+  }
+})();
+
+
+function autenticarToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader) return res.status(401).json({ message: "Token ausente!" });
+
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ message: "Token inválido!" });
+
+    req.userId = decoded.id;
+    next();
+  });
+}
+
+
+app.post("/register", async (req, res) => {
+  const { username, password, confirmpassword } = req.body;
+
+  if (!username || !password)
+    return res.status(400).json({ message: "Nome e senha obrigatórios!" });
+
+  if (password !== confirmpassword)
+    return res.status(400).json({ message: "Senhas não coincidem!" });
+
+  if (password.length < 6)
+    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres!" });
+
+  try {
+    const hashed = await bcryptjs.hash(password, 10);
+    const result = await pool.query(
+      "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id",
+      [username, hashed]
+    );
+    res.status(201).json({ message: "Usuário registrado com sucesso!", id: result.rows[0].id });
+  } catch (error) {
+    console.error("Register error:", error);
+    if (error && error.code === '23505') return res.status(409).json({ message: "Usuário já existe!" });
+    res.status(500).json({ message: "Erro no servidor!" });
+  }
+});
+
+
+app.post("/login", async (req, res) => {
+  const { username, password,email ,phone } = req.body;
+  try {
+    const result = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
+    if (!result || result.rowCount === 0) return res.status(404).json({ message: "Usuário não encontrado!" });
+    const user = result.rows[0];
+
+    const valid = await bcryptjs.compare(password, user.password);
+    if (!valid) return res.status(401).json({ message: "Senha incorreta!" });
+
+    const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "7d" });
+
+    try {
+      const eventsRes = await pool.query("SELECT * FROM eventos WHERE userId = $1", [user.id]);
+      res.json({ message: "Login OK!", token, events: eventsRes.rows });
+    } catch (err) {
+      console.error("Erro ao buscar eventos no login:", err);
+
+      res.json({ message: "Login OK!", token, events: [] });
+    }
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Erro no servidor!" });
+  }
+});
+
+
+app.get("/login", autenticarToken, (req, res) => {
+
+  pool.query("SELECT * FROM eventos WHERE userId = $1", [req.userId], (err, result) => {
+    if (err) return res.status(500).json({ message: "Erro ao buscar eventos!" });
+    res.json({ message: "Token válido!, Rota funcionando ", events: result.rows });
+  });
+});
+
+
+
+
+app.get("/tarefas", autenticarToken, (req, res) => {
+  pool.query("SELECT * FROM tarefas WHERE userId = $1", [req.userId], (err, result) => {
+    if (err) return res.status(500).json({ message: "Erro ao buscar tarefas!" });
+    res.json(result.rows);
+  });
+});
+
+
+
+app.post("/tarefas", autenticarToken, async (req, res) => {
+  const { tarefa, data, prioridade, allday } = req.body;
+
+  if (!tarefa || !data)
+    return res.status(400).json({ message: "Título e data são obrigatórios!" });
+
+  try {
+    const result = await pool.query(
+      "INSERT INTO tarefas (userId, tarefa, data, prioridade, allday) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [req.userId, tarefa, data, prioridade || '', !!allday]
+    );
+    const row = result.rows[0];
+    res.status(201).json({
+      message: "Tarefa adicionada!",
+      tarefa: { id: row.id, tarefa: row.tarefa, data: row.data, prioridade: row.prioridade || '', concluida: row.concluida, allday: row.allday }
+    });
+  } catch (err) {
+    console.error("Add tarefa error:", err);
+    res.status(500).json({ message: "Erro ao adicionar!" });
+  }
+});
+
+
+app.put("/tarefas/:id", autenticarToken, (req, res) => {
+  const { tarefa, data, prioridade, allday } = req.body;
+  const { id } = req.params;
+
+  pool.query(
+    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3, allday=$4 WHERE id=$5 AND userId=$6",
+    [tarefa, data, prioridade, !!allday, id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
+      res.json({ message: "Tarefa atualizada!" });
+    }
+  );
+});
+
+
+app.put("/tarefas/concluir/:id", autenticarToken, (req, res) => {
+  const { id } = req.params;
+
+  pool.query(
+    "UPDATE tarefas SET concluida=1 WHERE id=$1 AND userId=$2",
+    [id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ message: "Erro ao concluir tarefa!" });
+      res.json({ message: "Tarefa concluída!" });
+    }
+  );
+});
+
+
+app.delete("/tarefas/:id", autenticarToken, (req, res) => {
+  const { id } = req.params;
+
+  pool.query(
+    "DELETE FROM tarefas WHERE id=$1 AND userId=$2",
+    [id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ message: "Erro ao excluir tarefa!" });
+      res.json({ message: "Tarefa removida!" });
+    }
+  );
+});
+
+
+
+
+
+
+app.post('/eventos', autenticarToken, async (req, res) => {
+  const { titulo, start_date_time, end_date_time, description, color } = req.body;
+  const userId = req.userId;
+  try {
+    const result = await pool.query(
+      `INSERT INTO eventos (userId, titulo, start_date_time, end_date_time, description, color)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, titulo, start_date_time, end_date_time, description, color]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao criar evento:', err);
+    res.status(500).json({ message: 'Erro ao criar evento!' });
+  }
+});
+
+app.get('/eventos', autenticarToken, async (req, res) => {
+  const userId = req.userId;
+  const { start, end } = req.query;
+
+  const isValidDate = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(d);
+  const isDateOnly = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+
+  if (start && !isValidDate(start)) return res.status(400).json({ message: "Parâmetro 'start' inválido. Use YYYY-MM-DD ou ISO 8601." });
+  if (end && !isValidDate(end)) return res.status(400).json({ message: "Parâmetro 'end' inválido. Use YYYY-MM-DD ou ISO 8601." });
+
+  try {
+    let baseQuery = 'SELECT * FROM eventos WHERE userId = $1';
+    const params = [userId];
+
+    let startParam = start;
+    let endParam = end;
+    if (start && isDateOnly(start)) startParam = `${start}T00:00:00Z`;
+    if (end && isDateOnly(end)) endParam = `${end}T23:59:59.999Z`;
+
+    if (startParam && endParam) {
+      params.push(startParam);
+      params.push(endParam);
+      baseQuery += ` AND NOT (end_date_time < $${params.length - 1}::timestamptz OR start_date_time > $${params.length}::timestamptz)`;
+    } else if (startParam) {
+      params.push(startParam);
+      baseQuery += ` AND end_date_time >= $${params.length}::timestamptz`;
+    } else if (endParam) {
+      params.push(endParam);
+      baseQuery += ` AND start_date_time <= $${params.length}::timestamptz`;
+    }
+
+    baseQuery += ' ORDER BY start_date_time';
+
+    const result = await pool.query(baseQuery, params);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar eventos:', err);
+    res.status(500).json({ message: 'Erro ao buscar eventos!' });
+  }
+});
+
+app.get('/eventos/:id', autenticarToken, async (req, res) => {
+  const userId = req.userId;
+  const eventoId = req.params.id;
+  try {
+    const result = await pool.query('SELECT * FROM eventos WHERE id = $1 AND userId = $2', [eventoId, userId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Evento não encontrado!' });
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao buscar evento:', err);
+    res.status(500).json({ message: 'Erro ao buscar evento!' });
+  }
+});
+
+app.put('/eventos/:id', autenticarToken, async (req, res) => {
+  const userId = req.userId;
+  const eventoId = req.params.id;
+  const { titulo, start_date_time, end_date_time, description, color } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE eventos SET titulo=$1, start_date_time=$2, end_date_time=$3, description=$4, color=$5
+       WHERE id=$6 AND userId=$7 RETURNING *`,
+      [titulo, start_date_time, end_date_time, description, color, eventoId, userId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Evento não encontrado!' });
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao atualizar evento:', err);
+    res.status(500).json({ message: 'Erro ao atualizar evento!' });
+  }
+});
+
+app.delete('/eventos/:id', autenticarToken, async (req, res) => {
+  const userId = req.userId;
+  const eventoId = req.params.id;
+  try {
+    const result = await pool.query('DELETE FROM eventos WHERE id=$1 AND userId=$2 RETURNING *', [eventoId, userId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Evento não encontrado!' });
+    res.status(200).json({ message: 'Evento deletado com sucesso!' });
+  } catch (err) {
+    console.error('Erro ao deletar evento:', err);
+    res.status(500).json({ message: 'Erro ao deletar evento!' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
+
+
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'API funcionando' });
+});

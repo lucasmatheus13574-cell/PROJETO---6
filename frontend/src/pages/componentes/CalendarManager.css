@@ -1,0 +1,173 @@
+.calendar-manager {
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-manager h3 {
+    margin-top: 0;
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.calendars-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.calendar-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.calendar-item:hover {
+    border-color: #3174ad;
+    background: #f5f9ff;
+}
+
+.calendar-item.active {
+    border-color: #3174ad;
+    background: #e3f2fd;
+    font-weight: 600;
+}
+
+.calendar-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.calendar-info input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.calendar-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid #ddd;
+    cursor: pointer;
+}
+
+.calendar-name {
+    user-select: none;
+    color: #333;
+    font-weight: 500;
+}
+
+.badge-default {
+    display: inline-block;
+    background: #3174ad;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.calendar-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-rename,
+.btn-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-rename:hover {
+    background: #e8f4f8;
+}
+
+.btn-delete:hover {
+    background: #ffebee;
+}
+
+.btn-create-calendar {
+    width: 100%;
+    padding: 10px;
+    background: #3174ad;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-create-calendar:hover {
+    background: #1d4a7a;
+}
+
+.create-calendar-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.create-calendar-form input[type="text"] {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid #3174ad;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.create-calendar-form input[type="color"] {
+    width: 50px;
+    height: 38px;
+    border: 2px solid #3174ad;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-save,
+.btn-cancel {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-save {
+    background: #4caf50;
+    color: white;
+}
+
+.btn-save:hover {
+    background: #388e3c;
+}
+
+.btn-cancel {
+    background: #f44336;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #da190b;
+}
