@@ -4,7 +4,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 const agenda = new Agenda({
-    db: {
+    pg: {
         address: process.env.DATABASE_URL,
         collection: 'agendaJobs'
     }

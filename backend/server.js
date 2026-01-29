@@ -162,20 +162,20 @@ app.post("/register", async (req, res) => {
       "INSERT INTO users (username, password, email, phone) VALUES ($1, $2, $3, $4) RETURNING id, username, email",
       [username, hashed, email || null, phone || null]
     );
-    
+
     // Criar calendário padrão
     await pool.query(
       "INSERT INTO calendars (user_id, name, color, is_default) VALUES ($1, $2, $3, $4)",
       [result.rows[0].id, 'Padrão', '#3174ad', true]
     );
 
-    res.status(201).json({ 
-      message: "Usuário registrado com sucesso!", 
+    res.status(201).json({
+      message: "Usuário registrado com sucesso!",
       user: result.rows[0]
     });
   } catch (error) {
     console.error("Register error:", error);
-    if (error.code === '23505') 
+    if (error.code === '23505')
       return res.status(409).json({ message: "Usuário já existe!" });
     res.status(500).json({ message: "Erro no servidor!" });
   }
@@ -185,21 +185,21 @@ app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
     const result = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
-    if (!result || result.rowCount === 0) 
+    if (!result || result.rowCount === 0)
       return res.status(404).json({ message: "Usuário não encontrado!" });
-    
+
     const user = result.rows[0];
     const valid = await bcryptjs.compare(password, user.password);
-    if (!valid) 
+    if (!valid)
       return res.status(401).json({ message: "Senha incorreta!" });
 
     const token = jwt.sign({ id: user.id }, SECRET, { expiresIn: "7d" });
 
     try {
       const calendarsRes = await pool.query("SELECT * FROM calendars WHERE user_id = $1", [user.id]);
-      res.json({ 
-        message: "Login OK!", 
-        token, 
+      res.json({
+        message: "Login OK!",
+        token,
         user: { id: user.id, username: user.username, email: user.email, phone: user.phone },
         calendars: calendarsRes.rows
       });
@@ -411,9 +411,9 @@ app.get('/eventos', autenticarToken, async (req, res) => {
 
   const isValidDate = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}(?:T.*)?/.test(d);
 
-  if (start && !isValidDate(start)) 
+  if (start && !isValidDate(start))
     return res.status(400).json({ message: "Parâmetro 'start' inválido" });
-  if (end && !isValidDate(end)) 
+  if (end && !isValidDate(end))
     return res.status(400).json({ message: "Parâmetro 'end' inválido" });
 
   try {
@@ -439,7 +439,7 @@ app.get('/eventos', autenticarToken, async (req, res) => {
     query += ' ORDER BY start_date_time ASC';
 
     const result = await pool.query(query, params);
-    
+
     // Processar recorrências
     let allEvents = [];
     for (const event of result.rows) {
@@ -463,7 +463,7 @@ app.get('/eventos/:id', autenticarToken, async (req, res) => {
   const eventoId = req.params.id;
   try {
     const result = await pool.query('SELECT * FROM eventos WHERE id = $1 AND userId = $2', [eventoId, userId]);
-    if (result.rows.length === 0) 
+    if (result.rows.length === 0)
       return res.status(404).json({ message: 'Evento não encontrado!' });
     res.json(result.rows[0]);
   } catch (err) {
@@ -490,7 +490,7 @@ app.put('/eventos/:id', autenticarToken, async (req, res) => {
       [titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule || null, recurrence_until || null, recurrence_count || null, eventoId, userId]
     );
 
-    if (result.rows.length === 0) 
+    if (result.rows.length === 0)
       return res.status(404).json({ message: 'Evento não encontrado!' });
 
     res.json(result.rows[0]);
@@ -506,13 +506,13 @@ app.delete('/eventos/:id', autenticarToken, async (req, res) => {
   try {
     // Deletar lembretes associados
     await pool.query('DELETE FROM reminders WHERE event_id = $1', [eventoId]);
-    
+
     // Deletar exceções
     await pool.query('DELETE FROM event_exceptions WHERE event_id = $1', [eventoId]);
-    
+
     // Deletar evento
     const result = await pool.query('DELETE FROM eventos WHERE id=$1 AND userId=$2 RETURNING *', [eventoId, userId]);
-    if (result.rows.length === 0) 
+    if (result.rows.length === 0)
       return res.status(404).json({ message: 'Evento não encontrado!' });
 
     res.json({ message: 'Evento deletado com sucesso!' });
@@ -561,8 +561,8 @@ app.get('/events/:event_id/reminders', autenticarToken, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT r.* FROM reminders r
-       JOIN eventos e ON r.event_id = e.id
-       WHERE r.event_id = $1 AND e.userId = $2`,
+        JOIN eventos e ON r.event_id = e.id
+        WHERE r.event_id = $1 AND e.userId = $2`,
       [event_id, req.userId]
     );
 
@@ -579,8 +579,8 @@ app.delete('/reminders/:id', autenticarToken, async (req, res) => {
   try {
     const remCheck = await pool.query(
       `SELECT r.* FROM reminders r
-       JOIN eventos e ON r.event_id = e.id
-       WHERE r.id = $1 AND e.userId = $2`,
+        JOIN eventos e ON r.event_id = e.id
+        WHERE r.id = $1 AND e.userId = $2`,
       [id, req.userId]
     );
 
