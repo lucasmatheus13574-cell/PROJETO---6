@@ -26,7 +26,7 @@ agenda.define('send whatsapp reminder', async job => {
             dataEvento,
             minutesBefore
         });
-        console.log(WhatsApp reminder sent to );
+        console.log('WhatsApp reminder sent successfully');
     } catch (error) {
         console.error('Error sending WhatsApp reminder:', error.message);
     }
