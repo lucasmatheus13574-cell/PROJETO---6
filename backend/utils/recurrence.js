@@ -21,6 +21,7 @@ function generateRecurrences(event, rangeStart, rangeEnd) {
     return [event];
   }
 
+  
   const occurrences = [];
   const rule = parseRecurrenceRule(event.recurrence_rule);
   

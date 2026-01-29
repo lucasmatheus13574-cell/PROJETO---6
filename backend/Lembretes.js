@@ -38,7 +38,8 @@ app.get("/lembretes", autenticarToken, async (req, res) => {
                 .add(item.time_offset, "minute")
                 .format("DD/MM/YYYY HH:mm");
 
-            return {
+        
+                return {
                 ...item,
                 reminderTime,
                 whatsapp_link: telefone

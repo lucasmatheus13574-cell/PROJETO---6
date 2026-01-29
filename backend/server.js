@@ -540,6 +540,7 @@ app.post('/reminders', autenticarToken, async (req, res) => {
       [event_id, req.userId]
     );
 
+    
     if (eventCheck.rows.length === 0)
       return res.status(404).json({ message: 'Evento não encontrado!' });
 

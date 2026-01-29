@@ -19,6 +19,7 @@ export default function CalendarManager() {
     const [newCalendarName, setNewCalendarName] = useState('');
     const [newCalendarColor, setNewCalendarColor] = useState('#3174ad');
 
+    
     const handleCreateCalendar = async () => {
         if (!newCalendarName.trim()) {
             Swal.fire('Erro', 'Nome do calendário é obrigatório', 'error');

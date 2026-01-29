@@ -73,3 +73,4 @@ SELECT id, 'Padrão', '#3174ad', TRUE
 FROM users 
 WHERE id NOT IN (SELECT DISTINCT user_id FROM calendars)
 ON CONFLICT DO NOTHING;
+

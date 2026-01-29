@@ -19,6 +19,7 @@ if (process.env.RESEND_API_KEY) {
   }
 }
 
+
 // Fallback para nodemailer
 if (!emailProvider) {
   const nodemailer = require('nodemailer');

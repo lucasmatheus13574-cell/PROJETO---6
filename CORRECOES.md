@@ -16,6 +16,7 @@
 
 ### 3. server.js ✅
 - **Problemas**:
+
   - CREATE TABLE de `eventos` aparecia após ALTER TABLE
   - SQL inválido na criação de tabela (reminders dentro de eventos)
   - Falta de organização nas rotas

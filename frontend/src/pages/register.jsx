@@ -24,6 +24,7 @@ function Register() {
         const data = await response.json();
         setMensagem(data.message);
 
+        
         if (response.ok) {
             setTimeout(() => {
                 navigate("/login");

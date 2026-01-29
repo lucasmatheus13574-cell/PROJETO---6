@@ -15,6 +15,7 @@ export async function createEvent(req, res) {
         return res.status(400).json({ error: 'Horário do lembrete inválido' });
     }
 
+    
     // 3.3 agendar o job
     await agenda.schedule(
         reminderDate,

@@ -20,6 +20,7 @@ Implementação completa de sistema avançado de gerenciamento de calendários c
 
 ### Backend (Node.js/Express)
 ```
+
 ✓ server.js (359+ linhas)
   - 6 grupos de rotas (auth, calendars, tarefas, eventos, reminders, utilitários)
   - Suporte completo a CRUD de calendários

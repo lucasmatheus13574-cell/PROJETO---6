@@ -516,6 +516,7 @@ function Calendario() {
                     eventPropGetter={eventPropGetter}
                     formats={{
 
+                        
                         weekdayFormat: (date) => {
                             const s = format(date, 'EEEE', { locale: ptBR });
                             return s.charAt(0).toUpperCase() + s.slice(1);

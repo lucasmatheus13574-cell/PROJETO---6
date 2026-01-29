@@ -422,4 +422,5 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
     );
 };
 
+
 export default EventModal;

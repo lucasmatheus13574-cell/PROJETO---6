@@ -83,6 +83,7 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
     const dayNum = format(currentDate || new Date(), 'd', { locale: ptBR });
     const displayLabel = `${dayNum} ${monthYear.charAt(0).toUpperCase() + monthYear.slice(1)}`;
 
+    
     return (
         <div className="rbc-toolbar custom-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
             <div className="custom-nav" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

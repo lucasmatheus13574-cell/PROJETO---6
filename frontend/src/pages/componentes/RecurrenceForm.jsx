@@ -18,6 +18,7 @@ export default function RecurrenceForm({ onRecurrenceChange, initialValue }) {
         updateRecurrence(frequency, interval, updated, endType, endDate, count);
     };
 
+    
     const updateRecurrence = (freq, inter, days, endT, endD, cnt) => {
         if (!enableRecurrence) {
             onRecurrenceChange(null);

@@ -22,6 +22,7 @@ export default function MiniMap({ currentDate, onSelectDate }) {
         days.push(week);
     }
 
+    
     return (
         <div className="minimap">
             <div className="minimap-header">{format(m, 'MMMM yyyy', { locale: ptBR })}</div>

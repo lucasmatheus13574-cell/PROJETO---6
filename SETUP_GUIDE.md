@@ -18,6 +18,7 @@ Um aplicativo full-stack para gerenciamento de eventos, tarefas e lembretes com 
 - Condições de término: Nunca, Data específica, Após N ocorrências
 - Expansão on-the-fly de eventos (não materializa no banco)
 
+
 ### ✅ Lembretes
 - Lembretes por e-mail (via Resend ou Nodemailer)
 - Protótipo de lembretes por WhatsApp (links wa.me)

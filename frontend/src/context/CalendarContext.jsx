@@ -10,6 +10,7 @@ export const CalendarProvider = ({ children }) => {
     const [showYearView, setShowYearView] = useState(false);
     const [year, setYear] = useState(new Date().getFullYear());
     
+    
     // Novo: Estado para múltiplos calendários
     const [calendars, setCalendars] = useState([]);
     const [activeCalendarId, setActiveCalendarId] = useState(null);

@@ -63,6 +63,7 @@ export default function ReminderForm({ eventId, onReminderAdded, onClose }) {
         }
     };
 
+    
     const handleDeleteReminder = async (reminderId) => {
         try {
             await api.delete(`/reminders/${reminderId}`);

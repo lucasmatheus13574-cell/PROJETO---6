@@ -30,6 +30,7 @@ async function runMigration() {
       throw new Error(`Arquivo de migração não encontrado: ${migrationPath}`);
     }
     
+    
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
     
     // Dividir em statements individuais

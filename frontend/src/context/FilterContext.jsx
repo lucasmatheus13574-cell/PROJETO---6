@@ -12,6 +12,7 @@ export const FilterProvider = ({ children }) => {
         setShowTasks
     };
 
+    
     return (
         <FilterContext.Provider value={value}>
             {children}

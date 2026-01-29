@@ -12,6 +12,7 @@ Executa as migrações do banco de dados necessárias para criar tabelas de cale
 node scripts/migrate.js
 ```
 
+
 **O que faz:**
 - Lê o arquivo de migração SQL
 - Executa statements SQL no banco PostgreSQL

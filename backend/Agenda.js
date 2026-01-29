@@ -10,6 +10,7 @@ const agenda = new Agenda({
     }
 });
 
+
 agenda.define('send whatsapp reminder', async job => {
     const {
         nome,
