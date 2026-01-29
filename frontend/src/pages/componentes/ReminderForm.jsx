@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import api from './LembrestesAPI';
+import axios from 'axios';
 import Swal from 'sweetalert2';
 import './ReminderForm.css';
+
+const api = axios.create({
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+    headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+});
+
+api.interceptors.request.use(config => {
+    config.headers.Authorization = `Bearer ${localStorage.getItem('token')}`;
+    return config;
+});
 
 export default function ReminderForm({ eventId, onReminderAdded, onClose }) {
     const [reminders, setReminders] = useState([]);
@@ -44,6 +56,7 @@ export default function ReminderForm({ eventId, onReminderAdded, onClose }) {
             setMethod('email');
             setTimeOffset(-15);
         } catch (error) {
+            console.error('Erro ao adicionar lembrete:', error);
             Swal.fire('Erro', 'Erro ao adicionar lembrete', 'error');
         } finally {
             setLoading(false);
@@ -56,17 +69,23 @@ export default function ReminderForm({ eventId, onReminderAdded, onClose }) {
             setReminders(reminders.filter(r => r.id !== reminderId));
             Swal.fire('Sucesso', 'Lembrete removido!', 'success');
         } catch (error) {
+            console.error('Erro ao remover lembrete:', error);
             Swal.fire('Erro', 'Erro ao remover lembrete', 'error');
         }
     };
 
     const formatTimeOffset = (minutes) => {
         const absMin = Math.abs(minutes);
-        if (absMin < 60) return `${absMin} minutos antes`;
-        const hours = Math.floor(absMin / 60);
-        const mins = absMin % 60;
-        if (mins === 0) return `${hours} hora${hours > 1 ? 's' : ''} antes`;
-        return `${hours}h ${mins}m antes`;
+        if (absMin < 60) return `${absMin} minuto${absMin !== 1 ? 's' : ''} antes`;
+        if (absMin === 60) return `1 hora antes`;
+        if (absMin < 1440) {
+            const hours = Math.floor(absMin / 60);
+            const mins = absMin % 60;
+            if (mins === 0) return `${hours} hora${hours > 1 ? 's' : ''} antes`;
+            return `${hours}h ${mins}m antes`;
+        }
+        const days = Math.floor(absMin / 1440);
+        return `${days} dia${days > 1 ? 's' : ''} antes`;
     };
 
     const getMethodLabel = (method) => {

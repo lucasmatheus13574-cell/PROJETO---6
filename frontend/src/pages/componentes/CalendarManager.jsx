@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { CalendarContext } from '../../../context/CalendarContext';
+import { CalendarContext } from '../../context/CalendarContext';
 import Swal from 'sweetalert2';
 import './CalendarManager.css';
 
@@ -18,7 +18,6 @@ export default function CalendarManager() {
     const [isCreating, setIsCreating] = useState(false);
     const [newCalendarName, setNewCalendarName] = useState('');
     const [newCalendarColor, setNewCalendarColor] = useState('#3174ad');
-    const [editingId, setEditingId] = useState(null);
 
     const handleCreateCalendar = async () => {
         if (!newCalendarName.trim()) {
@@ -69,6 +68,7 @@ export default function CalendarManager() {
                 await updateCalendar(calendarId, { name: result.value });
                 Swal.fire('Sucesso', 'Calendário renomeado!', 'success');
             } catch (error) {
+                console.error('Erro ao renomear calendário:', error);
                 Swal.fire('Erro', 'Erro ao renomear calendário', 'error');
             }
         }

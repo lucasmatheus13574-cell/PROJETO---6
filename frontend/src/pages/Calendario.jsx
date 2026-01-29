@@ -506,7 +506,6 @@ function Calendario() {
                     views={['month', 'week', 'day']}
                     events={eventos}
                     localizer={localizer}
-                    messages={messages}
                     resizable
                     onEventDrop={MoverEvent}
                     onEventResize={MoverEvent}
