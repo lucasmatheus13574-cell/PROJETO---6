@@ -49,7 +49,40 @@ pool.query(`
     `);
     console.log('✅ Colunas email e phone verificadas/criadas');
   } catch (err) {
-    console.log('Aviso ao verificar colunas:', err.message);
+    console.log('Aviso ao verificar colunas users:', err.message);
+  }
+})();
+
+// Adicionar colunas de calendário e recorrência à tabela eventos se não existirem
+(async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE eventos 
+      ADD COLUMN IF NOT EXISTS calendar_id INTEGER,
+      ADD COLUMN IF NOT EXISTS recurrence_rule TEXT,
+      ADD COLUMN IF NOT EXISTS recurrence_until DATE,
+      ADD COLUMN IF NOT EXISTS recurrence_count INTEGER,
+      ADD COLUMN IF NOT EXISTS location TEXT
+    `);
+    console.log('✅ Colunas calendar_id, recurrence e location verificadas/criadas na tabela eventos');
+    
+    // Adicionar foreign key se ainda não existe
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'fk_eventos_calendar'
+        ) THEN
+          ALTER TABLE eventos 
+          ADD CONSTRAINT fk_eventos_calendar 
+          FOREIGN KEY(calendar_id) REFERENCES calendars(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
+    console.log('✅ Foreign key fk_eventos_calendar verificada/criada');
+  } catch (err) {
+    console.log('Aviso ao verificar colunas eventos:', err.message);
   }
 })();
 
