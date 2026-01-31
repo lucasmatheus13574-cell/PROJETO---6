@@ -143,33 +143,9 @@ function autenticarToken(req, res, next) {
 }
 
 // Middleware simples para proteger endpoints administrativos usando uma secret
-function checkAdminSecret(req, res, next) {
-  const secret = req.headers['x-admin-secret'] || req.headers['X-Admin-Secret'];
-  if (!process.env.ADMIN_TEST_SECRET) return res.status(500).json({ message: 'ADMIN_TEST_SECRET não configurado no servidor' });
-  if (!secret || secret !== process.env.ADMIN_TEST_SECRET) return res.status(403).json({ message: 'Admin secret inválido' });
-  next();
-}
+// Endpoints de teste removidos — use autenticação JWT (`/login`) para rotas protegidas
 
-// Endpoint para disparar um e-mail de teste (protegido)
-app.post('/admin/send-test-email', checkAdminSecret, async (req, res) => {
-  try {
-    const to = req.body.to || process.env.EMAIL_TEST_TO || process.env.EMAIL_FROM;
-    if (!to) return res.status(400).json({ message: 'Defina destinatário via body.to ou variáveis de ambiente EMAIL_TEST_TO/EMAIL_FROM' });
-
-    const sampleEvent = {
-      titulo: 'Evento de Teste (envio via endpoint)',
-      start_date_time: new Date().toISOString(),
-      location: 'Online',
-      description: 'Teste disparado pelo endpoint /admin/send-test-email'
-    };
-
-    const result = await sendReminderEmail(to, sampleEvent, 10);
-    res.json({ success: result.success, result });
-  } catch (err) {
-    console.error('Erro no endpoint de teste de e-mail:', err);
-    res.status(500).json({ message: 'Erro ao enviar e-mail de teste', error: err.message });
-  }
-});
+// Endpoints de teste removidos — ambiente pronto para produção
 
 // ===== ROTAS DE AUTENTICAÇÃO =====
 
@@ -184,6 +160,18 @@ app.post("/register", async (req, res) => {
 
   if (password.length < 6)
     return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres!" });
+
+  if (phone && phone.length < 10)
+    return res.status(400).json({ message: "Número de telefone inválido!" });
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ message: "E-mail inválido!" }); 
+  
+  if (email) {
+    const emailCheck = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+    if (emailCheck.rows.length > 0)
+      return res.status(409).json({ message: "E-mail já está em uso!" });
+  }
 
   try {
     const hashed = await bcryptjs.hash(password, 10);
