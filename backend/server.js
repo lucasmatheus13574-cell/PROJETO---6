@@ -39,6 +39,20 @@ pool.query(`
   )
 `);
 
+// Adicionar colunas email e phone se não existirem
+(async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS email TEXT,
+      ADD COLUMN IF NOT EXISTS phone TEXT
+    `);
+    console.log('✅ Colunas email e phone verificadas/criadas');
+  } catch (err) {
+    console.log('Aviso ao verificar colunas:', err.message);
+  }
+})();
+
 pool.query(`
   CREATE TABLE IF NOT EXISTS tarefas (
     id SERIAL PRIMARY KEY,
