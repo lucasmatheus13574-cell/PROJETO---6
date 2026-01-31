@@ -611,11 +611,18 @@ app.post('/reminders', autenticarToken, async (req, res) => {
     console.log('📝 Create reminder request from user:', req.userId);
     console.log('📋 Reminder data:', JSON.stringify(req.body, null, 2));
     
-    const { event_id, method, time_offset } = req.body;
+    let { event_id, method, time_offset } = req.body;
 
     if (!event_id || !method || time_offset === undefined) {
       console.log('❌ Validation failed: missing required fields');
       return res.status(400).json({ message: "Campos obrigatórios: event_id, method, time_offset" });
+    }
+
+    // Extrair ID real se for um evento recorrente (formato: "id_timestamp")
+    let realEventId = event_id;
+    if (typeof event_id === 'string' && event_id.includes('_')) {
+      realEventId = parseInt(event_id.split('_')[0]);
+      console.log('🔄 Converted recurrence event ID from', event_id, 'to', realEventId);
     }
 
     if (!['email', 'whatsapp'].includes(method)) {
@@ -627,7 +634,7 @@ app.post('/reminders', autenticarToken, async (req, res) => {
     console.log('🔍 Checking if event exists for user...');
     const eventCheck = await pool.query(
       'SELECT * FROM eventos WHERE id = $1 AND userId = $2',
-      [event_id, req.userId]
+      [realEventId, req.userId]
     );
 
     if (eventCheck.rows.length === 0) {
@@ -638,7 +645,7 @@ app.post('/reminders', autenticarToken, async (req, res) => {
     console.log('💾 Inserting reminder into database...');
     const result = await pool.query(
       'INSERT INTO reminders (event_id, method, time_offset) VALUES ($1, $2, $3) RETURNING *',
-      [event_id, method, time_offset]
+      [realEventId, method, time_offset]
     );
 
     console.log('✅ Reminder created successfully:', result.rows[0].id);
@@ -651,14 +658,20 @@ app.post('/reminders', autenticarToken, async (req, res) => {
 });
 
 app.get('/events/:event_id/reminders', autenticarToken, async (req, res) => {
-  const { event_id } = req.params;
+  let { event_id } = req.params;
+
+  // Extrair ID real se for um evento recorrente (formato: "id_timestamp")
+  let realEventId = event_id;
+  if (typeof event_id === 'string' && event_id.includes('_')) {
+    realEventId = parseInt(event_id.split('_')[0]);
+  }
 
   try {
     const result = await pool.query(
       `SELECT r.* FROM reminders r
         JOIN eventos e ON r.event_id = e.id
         WHERE r.event_id = $1 AND e.userId = $2`,
-      [event_id, req.userId]
+      [realEventId, req.userId]
     );
 
     res.json(result.rows);
