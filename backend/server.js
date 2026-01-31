@@ -397,29 +397,46 @@ app.delete("/tarefas/:id", autenticarToken, (req, res) => {
 // ===== ROTAS DE EVENTOS =====
 
 app.post('/eventos', autenticarToken, async (req, res) => {
-  const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count } = req.body;
-  const userId = req.userId;
-
-  if (!titulo || !titulo.trim())
-    return res.status(400).json({ message: "Título é obrigatório!" });
-
-  if (!start_date_time || !end_date_time)
-    return res.status(400).json({ message: "Datas são obrigatórias!" });
-
-  if (new Date(start_date_time) >= new Date(end_date_time))
-    return res.status(400).json({ message: "Data final deve ser maior que inicial!" });
-
   try {
+    console.log('📝 Create event request from user:', req.userId);
+    console.log('📋 Event data:', JSON.stringify(req.body, null, 2));
+    
+    const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count } = req.body;
+    const userId = req.userId;
+
+    if (!titulo || !titulo.trim()) {
+      console.log('❌ Validation failed: missing title');
+      return res.status(400).json({ message: "Título é obrigatório!" });
+    }
+
+    if (!start_date_time || !end_date_time) {
+      console.log('❌ Validation failed: missing dates');
+      return res.status(400).json({ message: "Datas são obrigatórias!" });
+    }
+
+    if (new Date(start_date_time) >= new Date(end_date_time)) {
+      console.log('❌ Validation failed: end date before start date');
+      return res.status(400).json({ message: "Data final deve ser maior que inicial!" });
+    }
+
     // Se calendar_id não for especificado, usar o calendário padrão
     let calendarId = calendar_id;
     if (!calendarId) {
+      console.log('🔍 Getting default calendar for user:', userId);
       const defaultCal = await pool.query(
         "SELECT id FROM calendars WHERE user_id = $1 AND is_default = TRUE LIMIT 1",
         [userId]
       );
       calendarId = defaultCal.rows[0]?.id;
+      console.log('📅 Default calendar found:', calendarId);
     }
 
+    if (!calendarId) {
+      console.log('❌ No calendar found for user');
+      return res.status(400).json({ message: "Nenhum calendário disponível. Por favor, crie um calendário primeiro." });
+    }
+
+    console.log('💾 Inserting event into database...');
     const result = await pool.query(
       `INSERT INTO eventos (userId, calendar_id, titulo, start_date_time, end_date_time, description, color, location, recurrence_rule, recurrence_until, recurrence_count)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
@@ -427,12 +444,13 @@ app.post('/eventos', autenticarToken, async (req, res) => {
     );
 
     const event = result.rows[0];
+    console.log('✅ Event created successfully:', event.id);
 
-    // Se houver lembrete, agendar job
     res.status(201).json(event);
   } catch (err) {
-    console.error('Erro ao criar evento:', err);
-    res.status(500).json({ message: 'Erro ao criar evento!' });
+    console.error('❌ Error creating event:', err.message);
+    console.error('Stack:', err.stack);
+    res.status(500).json({ message: 'Erro ao criar evento!', error: err.message });
   }
 });
 
