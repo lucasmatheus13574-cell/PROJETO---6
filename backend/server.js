@@ -607,34 +607,46 @@ app.delete('/eventos/:id', autenticarToken, async (req, res) => {
 // ===== ROTAS DE LEMBRETES =====
 
 app.post('/reminders', autenticarToken, async (req, res) => {
-  const { event_id, method, time_offset } = req.body;
-
-  if (!event_id || !method || time_offset === undefined)
-    return res.status(400).json({ message: "Campos obrigatórios: event_id, method, time_offset" });
-
-  if (!['email', 'whatsapp'].includes(method))
-    return res.status(400).json({ message: "Método deve ser 'email' ou 'whatsapp'" });
-
   try {
+    console.log('📝 Create reminder request from user:', req.userId);
+    console.log('📋 Reminder data:', JSON.stringify(req.body, null, 2));
+    
+    const { event_id, method, time_offset } = req.body;
+
+    if (!event_id || !method || time_offset === undefined) {
+      console.log('❌ Validation failed: missing required fields');
+      return res.status(400).json({ message: "Campos obrigatórios: event_id, method, time_offset" });
+    }
+
+    if (!['email', 'whatsapp'].includes(method)) {
+      console.log('❌ Validation failed: invalid method');
+      return res.status(400).json({ message: "Método deve ser 'email' ou 'whatsapp'" });
+    }
+
     // Verificar se o evento pertence ao usuário
+    console.log('🔍 Checking if event exists for user...');
     const eventCheck = await pool.query(
       'SELECT * FROM eventos WHERE id = $1 AND userId = $2',
       [event_id, req.userId]
     );
 
-    
-    if (eventCheck.rows.length === 0)
+    if (eventCheck.rows.length === 0) {
+      console.log('❌ Event not found or does not belong to user');
       return res.status(404).json({ message: 'Evento não encontrado!' });
+    }
 
+    console.log('💾 Inserting reminder into database...');
     const result = await pool.query(
       'INSERT INTO reminders (event_id, method, time_offset) VALUES ($1, $2, $3) RETURNING *',
       [event_id, method, time_offset]
     );
 
+    console.log('✅ Reminder created successfully:', result.rows[0].id);
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error('Erro ao criar lembrete:', err);
-    res.status(500).json({ message: 'Erro ao criar lembrete!' });
+    console.error('❌ Error creating reminder:', err.message);
+    console.error('Stack:', err.stack);
+    res.status(500).json({ message: 'Erro ao criar lembrete!', error: err.message });
   }
 });
 
