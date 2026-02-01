@@ -63,9 +63,10 @@ pool.query(`
       ADD COLUMN IF NOT EXISTS recurrence_rule TEXT,
       ADD COLUMN IF NOT EXISTS recurrence_until DATE,
       ADD COLUMN IF NOT EXISTS recurrence_count INTEGER,
-      ADD COLUMN IF NOT EXISTS location TEXT
+      ADD COLUMN IF NOT EXISTS location TEXT,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
     `);
-    console.log('✅ Colunas calendar_id, recurrence e location verificadas/criadas na tabela eventos');
+    console.log('✅ Colunas calendar_id, recurrence, location e updated_at verificadas/criadas na tabela eventos');
     
     // Adicionar foreign key se ainda não existe
     await pool.query(`
