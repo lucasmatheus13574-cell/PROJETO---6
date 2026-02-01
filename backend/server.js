@@ -570,30 +570,44 @@ app.get('/eventos/:id', autenticarToken, async (req, res) => {
 });
 
 app.put('/eventos/:id', autenticarToken, async (req, res) => {
-  const userId = req.userId;
-  const eventoId = req.params.id;
-  const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count } = req.body;
-
-  if (!titulo || !titulo.trim())
-    return res.status(400).json({ message: "Título é obrigatório!" });
-
-  if (new Date(start_date_time) >= new Date(end_date_time))
-    return res.status(400).json({ message: "Data final deve ser maior que inicial!" });
-
   try {
+    const userId = req.userId;
+    const eventoId = req.params.id;
+    
+    console.log('📝 Update event request from user:', userId);
+    console.log('📋 Event ID:', eventoId);
+    console.log('📋 Event data:', JSON.stringify(req.body, null, 2));
+    
+    const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count } = req.body;
+
+    if (!titulo || !titulo.trim()) {
+      console.log('❌ Validation failed: missing title');
+      return res.status(400).json({ message: "Título é obrigatório!" });
+    }
+
+    if (new Date(start_date_time) >= new Date(end_date_time)) {
+      console.log('❌ Validation failed: end date before start date');
+      return res.status(400).json({ message: "Data final deve ser maior que inicial!" });
+    }
+
+    console.log('💾 Updating event in database...');
     const result = await pool.query(
       `UPDATE eventos SET titulo=$1, start_date_time=$2, end_date_time=$3, description=$4, color=$5, location=$6, calendar_id=$7, recurrence_rule=$8, recurrence_until=$9, recurrence_count=$10, updated_at=NOW()
        WHERE id=$11 AND userId=$12 RETURNING *`,
       [titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule || null, recurrence_until || null, recurrence_count || null, eventoId, userId]
     );
 
-    if (result.rows.length === 0)
+    if (result.rows.length === 0) {
+      console.log('❌ Event not found or does not belong to user');
       return res.status(404).json({ message: 'Evento não encontrado!' });
+    }
 
+    console.log('✅ Event updated successfully:', result.rows[0].id);
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Erro ao atualizar evento:', err);
-    res.status(500).json({ message: 'Erro ao atualizar evento!' });
+    console.error('❌ Error updating event:', err.message);
+    console.error('Stack:', err.stack);
+    res.status(500).json({ message: 'Erro ao atualizar evento!', error: err.message });
   }
 });
 
