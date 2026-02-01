@@ -7,6 +7,7 @@ const { Pool } = require("pg");
 const agenda = require("./Agenda");
 const { generateRecurrences } = require("./utils/recurrence");
 const { sendReminderEmail } = require("./utils/emailReminder");
+const { startReminderScheduler } = require("./utils/reminderScheduler");
 
 dotenv.config();
 
@@ -86,6 +87,19 @@ pool.query(`
   }
 })();
 
+// Adicionar coluna whatsapp_link à tabela reminders se não existir
+(async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE reminders 
+      ADD COLUMN IF NOT EXISTS whatsapp_link TEXT
+    `);
+    console.log('✅ Coluna whatsapp_link verificada/criada na tabela reminders');
+  } catch (err) {
+    console.log('Aviso ao verificar coluna whatsapp_link:', err.message);
+  }
+})();
+
 pool.query(`
   CREATE TABLE IF NOT EXISTS tarefas (
     id SERIAL PRIMARY KEY,
@@ -155,6 +169,7 @@ pool.query(`
     time_offset INTEGER NOT NULL,
     is_sent BOOLEAN DEFAULT FALSE,
     sent_at TIMESTAMP,
+    whatsapp_link TEXT,
     scheduled_job_id TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
@@ -690,6 +705,7 @@ app.get('/reminders', autenticarToken, async (req, res) => {
         r.time_offset,
         r.is_sent,
         r.sent_at,
+        r.whatsapp_link,
         r.created_at as reminder_created_at,
         e.id as event_id,
         e.titulo,
@@ -742,6 +758,13 @@ app.delete('/reminders/:id', autenticarToken, async (req, res) => {
     console.log('Agenda iniciada com sucesso');
   } catch (err) {
     console.log('Aviso: Agenda não iniciada (pode ser esperado em desenvolvimento):', err.message);
+  }
+  
+  // Iniciar scheduler de lembretes
+  try {
+    startReminderScheduler();
+  } catch (err) {
+    console.error('Erro ao iniciar scheduler de lembretes:', err.message);
   }
 })();
 
