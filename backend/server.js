@@ -681,6 +681,37 @@ app.get('/events/:event_id/reminders', autenticarToken, async (req, res) => {
   }
 });
 
+app.get('/reminders', autenticarToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        r.id as reminder_id,
+        r.method,
+        r.time_offset,
+        r.is_sent,
+        r.sent_at,
+        r.created_at as reminder_created_at,
+        e.id as event_id,
+        e.titulo,
+        e.description,
+        e.start_date_time,
+        e.end_date_time,
+        e.location,
+        e.color
+      FROM reminders r
+      JOIN eventos e ON r.event_id = e.id
+      WHERE e.userId = $1
+      ORDER BY e.start_date_time ASC`,
+      [req.userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar todos os lembretes:', err);
+    res.status(500).json({ message: 'Erro ao buscar lembretes!' });
+  }
+});
+
 app.delete('/reminders/:id', autenticarToken, async (req, res) => {
   const { id } = req.params;
 
