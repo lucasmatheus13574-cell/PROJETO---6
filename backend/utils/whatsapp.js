@@ -31,7 +31,7 @@ function generateWhatsAppMessage({ titulo, startDateTime, location, description,
 /**
  * Gera link do WhatsApp com mensagem
  */
-export function generateWhatsAppLink({ phone, titulo, reminderTime, startDateTime, location, description }) {
+function generateWhatsAppLink({ phone, titulo, reminderTime, startDateTime, location, description }) {
   const message = generateWhatsAppMessage({ titulo, startDateTime, location, description, reminderTime });
   const cleanPhone = phone.replace(/\D/g, '');
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -40,7 +40,7 @@ export function generateWhatsAppLink({ phone, titulo, reminderTime, startDateTim
 /**
  * Envia lembrete via WhatsApp (gera link para envio manual)
  */
-export async function sendWhatsAppReminder(userPhone, event, reminderTimeMinutes) {
+async function sendWhatsAppReminder(userPhone, event, reminderTimeMinutes) {
   if (!userPhone) {
     throw new Error('Telefone do usuário não configurado');
   }
