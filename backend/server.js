@@ -776,10 +776,13 @@ app.delete('/reminders/:id', autenticarToken, async (req, res) => {
   }
   
   // Iniciar scheduler de lembretes
+  console.log('🔧 Tentando iniciar scheduler de lembretes...');
   try {
     startReminderScheduler();
+    console.log('✅ Chamada do scheduler executada');
   } catch (err) {
-    console.error('Erro ao iniciar scheduler de lembretes:', err.message);
+    console.error('❌ ERRO ao iniciar scheduler de lembretes:', err.message);
+    console.error('Stack:', err.stack);
   }
 })();
 
