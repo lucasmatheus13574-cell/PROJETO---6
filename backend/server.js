@@ -774,8 +774,12 @@ app.delete('/reminders/:id', autenticarToken, async (req, res) => {
   } catch (err) {
     console.log('Aviso: Agenda não iniciada (pode ser esperado em desenvolvimento):', err.message);
   }
+})();
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
   
-  // Iniciar scheduler de lembretes
+  // Iniciar scheduler após o servidor estar rodando
   console.log('🔧 Tentando iniciar scheduler de lembretes...');
   try {
     startReminderScheduler();
@@ -784,10 +788,6 @@ app.delete('/reminders/:id', autenticarToken, async (req, res) => {
     console.error('❌ ERRO ao iniciar scheduler de lembretes:', err.message);
     console.error('Stack:', err.stack);
   }
-})();
-
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
 });
 
 app.get('/', (req, res) => {
