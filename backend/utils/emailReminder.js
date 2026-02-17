@@ -4,44 +4,7 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
-// Tentar usar Resend, se não estiver disponível, usar nodemailer como fallback
-let emailProvider = null;
 
-// Tenta usar Resend se a API key estiver disponível
-if (process.env.RESEND_API_KEY) {
-  try {
-    const { Resend } = require('resend');
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    emailProvider = 'resend';
-    module.exports.resend = resend;
-  } catch (err) {
-    console.log('Resend não disponível, usando fallback');
-  }
-}
-
-
-// Fallback para nodemailer
-if (!emailProvider) {
-  const nodemailer = require('nodemailer');
-  
-  let transporter;
-  
-  // Configuração para AWS SES ou SMTP genérico
-  if (process.env.EMAIL_SMTP_HOST) {
-    transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_SMTP_HOST,
-      port: process.env.EMAIL_SMTP_PORT || 587,
-      secure: process.env.EMAIL_SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.EMAIL_SMTP_USER,
-        pass: process.env.EMAIL_SMTP_PASS
-      }
-    });
-  } 
-
-  emailProvider = 'nodemailer';
-  module.exports.transporter = transporter;
-}
 
 /**
  * Envia e-mail de lembrete de evento
@@ -113,7 +76,7 @@ function generateEmailTemplate(event, reminderTime) {
           background-color: #ffffff; 
           border-radius: 12px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          overflow: hidden;
+          overflow: hidden;'
         }
         .header { 
           background: linear-gradient(135deg, #3174ad 0%, #1e4a7a 100%);
