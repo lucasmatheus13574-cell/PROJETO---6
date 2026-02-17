@@ -47,7 +47,7 @@ if (!emailProvider) {
  * Envia e-mail de lembrete de evento
  */
 async function sendReminderEmail(userEmail, event, reminderTime) {
-  const emailFrom = process.env.EMAIL_FROM || 'noreply@adaptatasks.com';
+  const emailFrom = process.env.EMAIL_FROM || 'noreply@ADAPTTASKS.COM.BR';
   
   const emailContent = {
     to: userEmail,
