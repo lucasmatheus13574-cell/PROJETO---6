@@ -115,6 +115,19 @@ pool.query(`
   )
 `);
 
+// Adicionar colunas start_time e end_time à tabela tarefas
+(async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE tarefas
+      ADD COLUMN IF NOT EXISTS start_time TEXT,
+      ADD COLUMN IF NOT EXISTS end_time TEXT
+    `);
+  } catch (err) {
+    console.log('Aviso ao verificar colunas de horário em tarefas:', err.message);
+  }
+})();
+
 pool.query(`
   CREATE TABLE IF NOT EXISTS calendars (
     id SERIAL PRIMARY KEY,
@@ -409,15 +422,15 @@ app.get("/tarefas", autenticarToken, (req, res) => {
 });
 
 app.post("/tarefas", autenticarToken, async (req, res) => {
-  const { tarefa, data, prioridade, allday } = req.body;
+  const { tarefa, data, prioridade, allday, start_time, end_time } = req.body;
 
   if (!tarefa || !data)
     return res.status(400).json({ message: "Título e data são obrigatórios!" });
 
   try {
     const result = await pool.query(
-      "INSERT INTO tarefas (userId, tarefa, data, prioridade, allday) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [req.userId, tarefa, data, prioridade || '', !!allday]
+      "INSERT INTO tarefas (userId, tarefa, data, prioridade, allday, start_time, end_time) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+      [req.userId, tarefa, data, prioridade || '', !!allday, start_time || null, end_time || null]
     );
     res.status(201).json({ message: "Tarefa adicionada!", tarefa: result.rows[0] });
   } catch (err) {
@@ -427,12 +440,12 @@ app.post("/tarefas", autenticarToken, async (req, res) => {
 });
 
 app.put("/tarefas/:id", autenticarToken, (req, res) => {
-  const { tarefa, data, prioridade, allday } = req.body;
+  const { tarefa, data, prioridade, allday, start_time, end_time } = req.body;
   const { id } = req.params;
 
   pool.query(
-    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3, allday=$4 WHERE id=$5 AND userId=$6",
-    [tarefa, data, prioridade, !!allday, id, req.userId],
+    "UPDATE tarefas SET tarefa=$1, data=$2, prioridade=$3, allday=$4, start_time=$5, end_time=$6 WHERE id=$7 AND userId=$8",
+    [tarefa, data, prioridade, !!allday, start_time || null, end_time || null, id, req.userId],
     function (err) {
       if (err) return res.status(500).json({ message: "Erro ao atualizar tarefa!" });
       res.json({ message: "Tarefa atualizada!" });
