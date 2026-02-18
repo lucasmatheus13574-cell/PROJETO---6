@@ -151,6 +151,15 @@ pool.query(`
   )
 `);
 
+// Adicionar coluna allday à tabela eventos se não existir
+(async () => {
+  try {
+    await pool.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS allday BOOLEAN DEFAULT FALSE`);
+  } catch (err) {
+    console.log('Aviso ao verificar coluna allday em eventos:', err.message);
+  }
+})();
+
 pool.query(`
   CREATE TABLE IF NOT EXISTS event_exceptions (
     id SERIAL PRIMARY KEY,
@@ -450,7 +459,7 @@ app.post('/eventos', autenticarToken, async (req, res) => {
     console.log('📝 Create event request from user:', req.userId);
     console.log('📋 Event data:', JSON.stringify(req.body, null, 2));
     
-    const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count } = req.body;
+    const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count, allDay } = req.body;
     const userId = req.userId;
 
     if (!titulo || !titulo.trim()) {
@@ -487,9 +496,9 @@ app.post('/eventos', autenticarToken, async (req, res) => {
 
     console.log('💾 Inserting event into database...');
     const result = await pool.query(
-      `INSERT INTO eventos (userId, calendar_id, titulo, start_date_time, end_date_time, description, color, location, recurrence_rule, recurrence_until, recurrence_count)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-      [userId, calendarId, titulo, start_date_time, end_date_time, description, color || '#3174ad', location || '', recurrence_rule || null, recurrence_until || null, recurrence_count || null]
+      `INSERT INTO eventos (userId, calendar_id, titulo, start_date_time, end_date_time, description, color, location, allday, recurrence_rule, recurrence_until, recurrence_count)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [userId, calendarId, titulo, start_date_time, end_date_time, description, color || '#3174ad', location || '', !!allDay, recurrence_rule || null, recurrence_until || null, recurrence_count || null]
     );
 
     const event = result.rows[0];
@@ -579,7 +588,7 @@ app.put('/eventos/:id', autenticarToken, async (req, res) => {
     console.log('📋 Event ID:', eventoId);
     console.log('📋 Event data:', JSON.stringify(req.body, null, 2));
     
-    const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count } = req.body;
+    const { titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule, recurrence_until, recurrence_count, allDay } = req.body;
 
     if (!titulo || !titulo.trim()) {
       console.log('❌ Validation failed: missing title');
@@ -593,9 +602,9 @@ app.put('/eventos/:id', autenticarToken, async (req, res) => {
 
     console.log('💾 Updating event in database...');
     const result = await pool.query(
-      `UPDATE eventos SET titulo=$1, start_date_time=$2, end_date_time=$3, description=$4, color=$5, location=$6, calendar_id=$7, recurrence_rule=$8, recurrence_until=$9, recurrence_count=$10, updated_at=NOW()
-       WHERE id=$11 AND userId=$12 RETURNING *`,
-      [titulo, start_date_time, end_date_time, description, color, location, calendar_id, recurrence_rule || null, recurrence_until || null, recurrence_count || null, eventoId, userId]
+      `UPDATE eventos SET titulo=$1, start_date_time=$2, end_date_time=$3, description=$4, color=$5, location=$6, calendar_id=$7, allday=$8, recurrence_rule=$9, recurrence_until=$10, recurrence_count=$11, updated_at=NOW()
+       WHERE id=$12 AND userId=$13 RETURNING *`,
+      [titulo, start_date_time, end_date_time, description, color, location, calendar_id, !!allDay, recurrence_rule || null, recurrence_until || null, recurrence_count || null, eventoId, userId]
     );
 
     if (result.rows.length === 0) {
