@@ -3,7 +3,6 @@ import Swal from "sweetalert2";
 import { CalendarContext } from "../../context/CalendarContext";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "../../styles/Calendarios.css";
-import "../../styles/lembretes.css";
 import { format } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 
@@ -54,10 +53,6 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
             }
         });
     };
-    const lembretes = () => {
-        window.location.href = "/lembretes";
-    }
-
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -83,7 +78,7 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
     const dayNum = format(currentDate || new Date(), 'd', { locale: ptBR });
     const displayLabel = `${dayNum} ${monthYear.charAt(0).toUpperCase() + monthYear.slice(1)}`;
 
-    
+
     return (
         <div className="rbc-toolbar custom-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px' }}>
             <div className="custom-nav" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -111,7 +106,6 @@ export default function CustomToolbar({  onNavigate, onView, view }) {
                 )}
 
                 <button className="logout-btn" onClick={logout}>🚪 Logout</button>
-                <button className=".btn-reminders" onClick={lembretes}>  Meus Lembretes</button>
             </div>
         </div>
     );

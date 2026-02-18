@@ -16,41 +16,60 @@ function Sidebar() {
     };
 
     return (
+        <>
+        {!open && (
+            <button
+                className="sidebar-reopen-float"
+                onClick={() => setOpen(true)}
+                aria-label="Abrir sidebar"
+            >
+                ☰
+            </button>
+        )}
         <aside className={`sidebar ${open ? 'open' : 'closed'}`}>
             <div className="sidebar-header">
-                <h2 className="sidebar-logo">Meu App</h2>
+                <h2 className="sidebar-logo">📅 Agenda</h2>
                 <button className="sidebar-toggle" onClick={() => setOpen(!open)} aria-label="Toggle sidebar">
-                    {open ? '◀' : '☰'}
+                    ◀
                 </button>
             </div>
 
-            <nav className="sidebar-menu">
-                <NavLink to="/eventos" className="sidebar-link">
-                    Agenda
-                </NavLink>
-            </nav>
+            <div className="sidebar-inner">
+                <p className="sidebar-section-title">Navegação</p>
+                <nav className="sidebar-menu">
+                    <NavLink to="/eventos" className="sidebar-link">
+                        📆 Calendário
+                    </NavLink>
+                    <NavLink to="/lembretes" className="sidebar-link">
+                        🔔 Lembretes
+                    </NavLink>
+                </nav>
 
-            <div className="sidebar-filters">
-                <h3>Filtros</h3>
-                <label className="filter-row">
-                    <input type="checkbox" checked={showEvents} onChange={(e) => setShowEvents(e.target.checked)} /> Eventos
-                </label>
-                <label className="filter-row">
-                    <input type="checkbox" checked={showTasks} onChange={(e) => setShowTasks(e.target.checked)} /> Tarefas
-                </label>
-            </div>
+                <p className="sidebar-section-title">Exibir</p>
+                <div className="sidebar-filters">
+                    <label className="filter-row">
+                        <input type="checkbox" checked={showEvents} onChange={(e) => setShowEvents(e.target.checked)} />
+                        Eventos
+                    </label>
+                    <label className="filter-row">
+                        <input type="checkbox" checked={showTasks} onChange={(e) => setShowTasks(e.target.checked)} />
+                        Tarefas
+                    </label>
+                </div>
 
-            <div className="sidebar-calendars">
-                <h3>Meus Calendários</h3>
-                <CalendarManager />
-            </div>
+                <p className="sidebar-section-title">Meus Calendários</p>
+                <div className="sidebar-calendars">
+                    <CalendarManager />
+                </div>
 
-            <div className="sidebar-minimap">
-                <MiniMap currentDate={currentDate} onSelectDate={onSelectDate} />
+                <div className="sidebar-minimap">
+                    <MiniMap currentDate={currentDate} onSelectDate={onSelectDate} />
+                </div>
             </div>
         </aside>
+        </>
     );
 }
 
+export default Sidebar;
 
-export default Sidebar; 

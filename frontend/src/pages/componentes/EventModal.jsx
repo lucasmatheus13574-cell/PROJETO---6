@@ -264,17 +264,15 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                                 value={format(parse(start, "yyyy-MM-dd'T'HH:mm", new Date()), 'yyyy-MM-dd')}
                                 onChange={(e) => setStart(e.target.value)}
                             />
-
-                            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <label className="all-day-toggle" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div className="all-day-row">
+                                <label className="all-day-toggle">
                                     <span className="switch">
                                         <input aria-label="Dia inteiro" type="checkbox" checked={allDay} onChange={() => setAllDay(!allDay)} />
                                         <span className="slider" />
                                     </span>
-                                    <span style={{ fontWeight: 600, color: '#374151' }}>Dia inteiro</span>
+                                    <span className="all-day-label">Dia inteiro</span>
                                 </label>
-
-                                {isCreate && <small style={{ color: '#6b7280' }}>Marque para criar tarefa no dia inteiro</small>}
+                                {isCreate && <span className="field-helper">Marque para criar tarefa no dia inteiro</span>}
                             </div>
                         </div>
                     ) : (
@@ -312,36 +310,34 @@ const EventModal = ({ evento, onClose, onSave, onDelete, onConclude }) => {
                                     ))}
 
                                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                                        <div className="date-summary" style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                                        <div className="date-summary">
                                             <div className="summary-card">
                                                 <div className="summary-title">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
                                                 <div className="summary-sub">Não se repete</div>
                                             </div>
-                                            <div style={{ marginLeft: 'auto' }}>
-                                                <button className="add-time-btn primary" onClick={() => setSlots([...slots, { start: slots[slots.length - 1].end, end: format(add(parse(slots[slots.length - 1].end, "yyyy-MM-dd'T'HH:mm", new Date()), { hours: 1 }), "yyyy-MM-dd'T'HH:mm") }])}>Adicionar horário</button>
-                                            </div>
+                                            <button className="add-time-btn primary" onClick={() => setSlots([...slots, { start: slots[slots.length - 1].end, end: format(add(parse(slots[slots.length - 1].end, "yyyy-MM-dd'T'HH:mm", new Date()), { hours: 1 }), "yyyy-MM-dd'T'HH:mm") }])}>Adicionar horário</button>
                                         </div>
                                     </div>
 
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                                <div className="date-summary">
                                     <div className="summary-card">
                                         <div className="summary-title">{format(parse(slots[0].start, "yyyy-MM-dd'T'HH:mm", new Date()), "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
                                         <div className="summary-sub">Não se repete</div>
                                     </div>
-                                    <div style={{ marginLeft: 'auto' }}>
-                                        <button className="add-time-btn primary" disabled>Adicionar horário</button>
-                                    </div>
+                                    <button className="add-time-btn primary" disabled>Adicionar horário</button>
                                 </div>
                             )}
 
-                            <div style={{ marginTop: 10 }}>
-                                <label className="all-day-toggle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                    <input aria-label="Dia inteiro" type="checkbox" checked={allDay} onChange={() => setAllDay(!allDay)} />
-                                    <span style={{ fontWeight: 600 }}>Dia inteiro</span>
+                            <div className="all-day-row">
+                                <label className="all-day-toggle">
+                                    <span className="switch">
+                                        <input aria-label="Dia inteiro" type="checkbox" checked={allDay} onChange={() => setAllDay(!allDay)} />
+                                        <span className="slider" />
+                                    </span>
+                                    <span className="all-day-label">Dia inteiro</span>
                                 </label>
-                                <a href="#" style={{ marginLeft: 12, color: '#1a73e8', textDecoration: 'none' }}>Fuso horário</a>
                             </div>
                         </div>
                     )}

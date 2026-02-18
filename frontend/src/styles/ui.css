@@ -1,47 +1,5 @@
-/* UI variables and shared components */
-:root {
-  --primary: #1a73e8;
-  --danger: #ef4444;
-  --muted: #6b7280;
-  --bg-muted: #fafafa;
-  --radius: 8px;
-  --shadow-strong: 0 6px 16px rgba(26,115,232,0.12);
-}
+/* ui.css – shared utilities, now delegates to the design system in index.css */
+/* Button and variable definitions live in index.css and EventModal.css */
 
-
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  padding: 12px 20px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-strong);
-  cursor: pointer;
-}
-
-.btn-secondary {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--primary);
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background: rgba(26,115,232,0.06);
-}
-
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-  border: none;
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-
-.muted { color: var(--muted); }
+.muted   { color: var(--text-muted); }
 .rounded { border-radius: var(--radius); }

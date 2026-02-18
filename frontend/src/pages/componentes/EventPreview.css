@@ -1,0 +1,202 @@
+/* ─── Event Preview Popup ────────────────────────────────────────────────── */
+
+/* Transparent full-screen overlay to capture outside clicks */
+.ep-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: transparent;
+}
+
+/* The popup card */
+.ep-popup {
+    position: fixed;
+    width: 320px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.05) inset;
+    overflow: hidden;
+    z-index: 100000;
+    animation: epSlide 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+@keyframes epSlide {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── Header strip ───────────────────────────────────────────────────────── */
+.ep-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    min-height: 44px;
+}
+
+.ep-type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(4px);
+}
+
+.ep-close {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+.ep-close:hover { background: rgba(255,255,255,0.3); }
+
+/* ─── Body ───────────────────────────────────────────────────────────────── */
+.ep-body {
+    padding: 14px 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ep-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.ep-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ep-icon {
+    font-size: 15px;
+    line-height: 1.4;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+}
+
+.ep-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.ep-date {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: capitalize;
+}
+
+.ep-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.ep-badge {
+    display: inline-block;
+    background: rgba(99,102,241,0.2);
+    color: var(--primary-light);
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ep-priority {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ep-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}
+
+.ep-concluded {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(16,185,129,0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    width: fit-content;
+    letter-spacing: 0.04em;
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+.ep-footer {
+    padding: 10px 16px 14px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border);
+}
+
+.ep-open-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: var(--grad-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(99,102,241,0.4);
+    transition: var(--transition);
+    letter-spacing: 0.02em;
+    width: 100%;
+    justify-content: center;
+}
+.ep-open-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(99,102,241,0.5);
+    filter: brightness(1.08);
+}
+.ep-open-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+}

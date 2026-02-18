@@ -13,6 +13,8 @@ import { FilterContext } from '../context/FilterContextValue';
 
 import CustomToolbar from './componentes/CustomToobar';
 import EventModal from './componentes/EventModal';
+import EventPreview from './componentes/EventPreview';
+import DayOverflow from './componentes/DayOverflow';
 import CalendarYearView from './componentes/CalendarYearView';
 import { CalendarContext } from '../context/CalendarContext';
 import '../styles/CalendarYear.css';
@@ -60,6 +62,7 @@ function Calendario() {
 
     const [eventos, setEventos] = useState([]);
     const [eventoSelecionado, setEventoSelecionado] = useState(null);
+    const [preview, setPreview] = useState(null);
     const rangeRef = useRef({ start: null, end: null });
     const { showEvents, showTasks } = useContext(FilterContext);
     const { currentDate: ctxCurrentDate, setCurrentDate: ctxSetCurrentDate, view: ctxView, setView: ctxSetView, showYearView: ctxShowYearView, setShowYearView: ctxSetShowYearView, year: ctxYear, setYear: ctxSetYear, visibleCalendars } = useContext(CalendarContext);
@@ -222,10 +225,19 @@ function Calendario() {
     };
 
 
-    const handleEventClick = (event) => {
-
-        setEventoSelecionado({ mode: 'edit', ...event });
+    const handleEventClick = (event, e) => {
+        const rect = e?.target?.closest('.rbc-event')?.getBoundingClientRect?.() ||
+                      e?.currentTarget?.getBoundingClientRect?.() || null;
+        setPreview({ event, anchorRect: rect });
     }
+
+    const handlePreviewOpen = () => {
+        if (!preview) return;
+        setEventoSelecionado({ mode: 'edit', ...preview.event });
+        setPreview(null);
+    }
+
+    const handlePreviewClose = () => setPreview(null);
 
     const handleEventClose = () => {
         setEventoSelecionado(null);
@@ -238,6 +250,7 @@ function Calendario() {
                 payload.start_date_time = new Date(payload.start_date_time).toISOString();
                 payload.end_date_time = new Date(payload.end_date_time).toISOString();
 
+                console.log('📤 Sending event payload:', payload);
 
                 const res = await fetch(`${URL_API}/eventos`, {
                     method: 'POST',
@@ -247,7 +260,15 @@ function Calendario() {
                     },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) throw new Error('Erro ao criar evento');
+                
+                console.log('📥 Response status:', res.status);
+                
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({ message: 'Erro desconhecido' }));
+                    console.error('❌ Error response:', errorData);
+                    throw new Error(errorData.message || 'Erro ao criar evento');
+                }
+                
                 await res.json();
                 Swal.fire('Criado', 'Evento criado com sucesso', 'success');
             } else {
@@ -275,12 +296,14 @@ function Calendario() {
     };
 
     const updateItem = async (id, payload, tipo) => {
+        // Eventos recorrentes têm id no formato "123_timestamp" — extrair o ID real
+        const realId = typeof id === 'string' && id.includes('_') ? id.split('_')[0] : id;
         try {
             if (tipo === 'evento') {
                 payload.start_date_time = new Date(payload.start_date_time).toISOString();
                 payload.end_date_time = new Date(payload.end_date_time).toISOString();
 
-                const res = await fetch(`${URL_API}/eventos/${id}`, {
+                const res = await fetch(`${URL_API}/eventos/${realId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -288,10 +311,13 @@ function Calendario() {
                     },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) throw new Error('Erro ao atualizar evento');
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.message || 'Erro ao atualizar evento');
+                }
                 Swal.fire('Atualizado', 'Evento atualizado com sucesso', 'success');
             } else {
-                const res = await fetch(`${URL_API}/tarefas/${id}`, {
+                const res = await fetch(`${URL_API}/tarefas/${realId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -299,7 +325,10 @@ function Calendario() {
                     },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) throw new Error('Erro ao atualizar tarefa');
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.message || 'Erro ao atualizar tarefa');
+                }
                 Swal.fire('Atualizado', 'Tarefa atualizada com sucesso', 'success');
             }
 
@@ -308,26 +337,34 @@ function Calendario() {
             return true;
         } catch (err) {
             console.error(err);
-            Swal.fire('Erro', 'Não foi possível atualizar o item', 'error');
+            Swal.fire('Erro', err.message || 'Não foi possível atualizar o item', 'error');
             return false;
         }
     };
 
     const deleteItem = async (id, tipo) => {
+        // Eventos recorrentes têm id no formato "123_timestamp" — extrair o ID real
+        const realId = typeof id === 'string' && id.includes('_') ? id.split('_')[0] : id;
         try {
             if (tipo === 'evento') {
-                const res = await fetch(`${URL_API}/eventos/${id}`, {
+                const res = await fetch(`${URL_API}/eventos/${realId}`, {
                     method: 'DELETE',
                     headers: { 'authorization': `Bearer ${token}` }
                 });
-                if (!res.ok) throw new Error('Erro ao deletar evento');
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.message || 'Erro ao deletar evento');
+                }
                 Swal.fire('Deletado', 'Evento deletado com sucesso', 'success');
             } else {
-                const res = await fetch(`${URL_API}/tarefas/${id}`, {
+                const res = await fetch(`${URL_API}/tarefas/${realId}`, {
                     method: 'DELETE',
                     headers: { 'authorization': `Bearer ${token}` }
                 });
-                if (!res.ok) throw new Error('Erro ao deletar tarefa');
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.message || 'Erro ao deletar tarefa');
+                }
                 Swal.fire('Deletado', 'Tarefa deletada com sucesso', 'success');
             }
 
@@ -336,7 +373,7 @@ function Calendario() {
             return true;
         } catch (err) {
             console.error(err);
-            Swal.fire('Erro', 'Não foi possível deletar o item', 'error');
+            Swal.fire('Erro', err.message || 'Não foi possível deletar o item', 'error');
             return false;
         }
     };
@@ -394,14 +431,10 @@ function Calendario() {
     };
 
     const EventTooltip = ({ event }) => (
-        <div>
-            <strong>{event.title}</strong>
-            {event.location && <div>{event.location}</div>}
-            <div>
-                {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
-
-            </div>
-        </div>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', whiteSpace: 'nowrap', width: '100%' }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>{event.title}</span>
+            <span style={{ opacity: 0.7, fontSize: '9px', flexShrink: 0 }}>{format(event.start, 'HH:mm')}</span>
+        </span>
     );
 
 
@@ -437,8 +470,8 @@ function Calendario() {
                             onDayClick={async (date) => {
 
                                 try {
-                                    const start = endOfDay(new Date(date).utc().startOf('day').toISOString());
-                                    const end = startOfDay(new Date(date).utc().endOf('day').toISOString());
+                                    const start = startOfDay(date).toISOString();
+                                    const end = endOfDay(date).toISOString();
 
                                     const urlEvents = `${URL_API}/eventos?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
                                     const resEvents = await fetch(urlEvents, { headers: { 'authorization': `Bearer ${token}` } });
@@ -514,6 +547,8 @@ function Calendario() {
                     selectable
                     onSelectSlot={(slotInfo) => openCreateModal(slotInfo)}
                     eventPropGetter={eventPropGetter}
+                    popup={true}
+                    popupOffset={{ x: 0, y: 8 }}
                     formats={{
 
                         
@@ -541,6 +576,15 @@ function Calendario() {
                 />
                 )}
                 </div>
+
+            {preview && (
+                <EventPreview
+                    event={preview.event}
+                    anchorRect={preview.anchorRect}
+                    onOpenFull={handlePreviewOpen}
+                    onClose={handlePreviewClose}
+                />
+            )}
 
             {eventoSelecionado && (
                 <EventModal

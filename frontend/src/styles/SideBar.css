@@ -1,29 +1,88 @@
+/* ─── Layout ────────────────────────────────────────────────────────────── */
 .layout {
     display: flex;
     height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
 }
 
+/* ─── Sidebar ───────────────────────────────────────────────────────────── */
 .sidebar {
-    width: 340px;
-    background: #1e1e1e;
-    color: white;
-    padding: 20px;
-    transition: width 250ms ease, transform 250ms ease;
+    width: 300px;
+    min-width: 300px;
+    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    color: var(--text-primary);
+    padding: 0;
+    transition: width var(--transition), min-width var(--transition), transform var(--transition);
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    z-index: 100;
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 200px;
+    background: radial-gradient(ellipse at top left, rgba(99,102,241,0.15), transparent);
+    pointer-events: none;
 }
 
 .sidebar.closed {
-    width: 250px;
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+    border-right: none;
+    padding: 0;
 }
 
 .sidebar.open {
     transform: translateX(0);
 }
 
+/* ─── Floating reopen button ─────────────────────────────────────────────── */
+.sidebar-reopen-float {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 200;
+    background: var(--surface-2);
+    border: 1px solid var(--border-light);
+    color: var(--primary-light);
+    padding: 8px 11px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 16px;
+    line-height: 1;
+    box-shadow: var(--shadow-lg);
+}
+.sidebar-reopen-float:hover {
+    background: rgba(99,102,241,0.2);
+    border-color: var(--primary);
+    color: var(--primary-light);
+}
+
+.sidebar-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    gap: 6px;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
 .sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
 }
 
 
@@ -37,10 +96,12 @@
         top: 0;
         left: 0;
         height: 100vh;
-        width: 260px;
+        width: 280px;
+        min-width: 280px;
         transform: translateX(-110%);
-        transition: transform 220ms ease;
+        transition: transform 240ms cubic-bezier(0.4,0,0.2,1);
         z-index: 9999;
+        box-shadow: var(--shadow-lg);
     }
 
     .sidebar.open {
@@ -57,116 +118,199 @@
     }
 }
 
-
 @media (min-width: 769px) and (max-width: 1024px) {
     .sidebar {
-        width: 200px;
+        width: 240px;
+        min-width: 240px;
     }
 } 
 
+/* ─── Toggle Button ────────────────────────────────────────────────────── */
 .sidebar-toggle {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #8173ff;
-    padding: 6px 8px;
-    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-light);
+    color: var(--primary-light);
+    padding: 7px 9px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    line-height: 1;
+}
+.sidebar-toggle:hover {
+    background: rgba(99,102,241,0.15);
+    border-color: var(--primary);
+    color: var(--primary-light);
 }
 
+/* ─── Logo ──────────────────────────────────────────────────────────────── */
 .sidebar-logo {
-    font-size: 20px;
-    margin-bottom: 12px;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: 0;
+    background: var(--grad-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
+/* ─── Menu ──────────────────────────────────────────────────────────────── */
 .sidebar-menu {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-top: 12px;
+    gap: 4px;
+    margin-top: 8px;
 }
 
 .sidebar-link {
-    color: #ccc;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
     text-decoration: none;
-    padding: 10px 14px;
-    border-radius: 8px;
-    transition: background 0.2s;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
+    position: relative;
 }
-
+.sidebar-link::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 20%; bottom: 20%;
+    width: 3px;
+    border-radius: 99px;
+    background: var(--grad-primary);
+    opacity: 0;
+    transition: var(--transition);
+}
 .sidebar-link:hover {
-    background: #2a2a2a;
-    color: white;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
 }
-
 .sidebar-link.active {
-    background: #1976d2;
-    color: white;
+    background: rgba(99,102,241,0.18);
+    color: var(--primary-light);
+    font-weight: 600;
+}
+.sidebar-link.active::before { opacity: 1; }
+
+/* ─── Section headers ────────────────────────────────────────────────────── */
+.sidebar-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0 12px;
+    margin-top: 16px;
+    margin-bottom: 4px;
 }
 
+/* ─── Filters ───────────────────────────────────────────────────────────── */
 .sidebar-filters {
-    margin-top: 24px;
-    border-top: 1px solid rgba(255,255,255,0.04);
-    padding-top: 12px;
+    margin-top: 8px;
+    padding-top: 4px;
 }
 
 .filter-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #ddd;
-    margin: 8px 0;
+    gap: 10px;
+    color: var(--text-secondary);
+    margin: 4px 0;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.filter-row:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+
+.filter-row input[type='checkbox'] {
+    accent-color: var(--primary);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
 }
 
+/* ─── Calendars section ──────────────────────────────────────────────────── */
 .sidebar-calendars {
-    margin-top: 24px;
-    border-top: 1px solid rgba(255,255,255,0.04);
-    padding-top: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    padding-bottom: 12px;
+    margin-top: 8px;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
+/* ─── Main content ──────────────────────────────────────────────────────── */
 .main-content {
     flex: 1;
-    background: #f4f6f8;
-    padding: 20px;
+    background: var(--bg);
+    padding: 24px;
     overflow-y: auto;
+    min-width: 0;
 }
 
+/* ─── Minimap ───────────────────────────────────────────────────────────── */
 .sidebar-minimap {
-    margin-top: 18px;
+    margin-top: 8px;
+    padding: 0 4px;
 }
 
 .minimap {
-    background: #111217;
-    padding: 10px;
-    border-radius: 8px;
-    color: #fff;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    overflow: hidden;
 }
 
 .minimap-header {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--primary-light);
+    text-transform: capitalize;
+    letter-spacing: 0.03em;
 }
 
 .minimap-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
+}
+
+.minimap-th {
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 10px;
+    padding: 2px;
+    text-transform: uppercase;
 }
 
 .minimap-day {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     text-align: center;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     padding: 2px;
-    color: #ddd;
+    color: var(--text-secondary);
+    transition: var(--transition);
+    font-size: 11px;
 }
 
-.minimap-day.other-month { color: rgba(255,255,255,0.35); }
-.minimap-day.today { background: #1a73e8; color: #fff; }
-.minimap-day:hover { background: rgba(255,255,255,0.06); }
+.minimap-day.other-month { color: var(--text-muted); opacity: 0.5; }
+.minimap-day.today {
+    background: var(--grad-primary);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.4);
+}
+.minimap-day:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }

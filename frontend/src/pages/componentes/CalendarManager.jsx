@@ -19,6 +19,10 @@ export default function CalendarManager() {
     const [newCalendarName, setNewCalendarName] = useState('');
     const [newCalendarColor, setNewCalendarColor] = useState('#3174ad');
 
+    const [editingId, setEditingId] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [editColor, setEditColor] = useState('#3174ad');
+
     
     const handleCreateCalendar = async () => {
         if (!newCalendarName.trim()) {
@@ -56,22 +60,22 @@ export default function CalendarManager() {
         }
     };
 
-    const handleRenameCalendar = async (calendarId, currentName) => {
-        const result = await Swal.fire({
-            title: 'Renomear calendário',
-            input: 'text',
-            inputValue: currentName,
-            showCancelButton: true
-        });
+    const handleRenameCalendar = async (calendarId, currentName, currentColor) => {
+        setEditingId(calendarId);
+        setEditName(currentName);
+        setEditColor(currentColor || '#3174ad');
+    };
 
-        if (result.isConfirmed && result.value) {
-            try {
-                await updateCalendar(calendarId, { name: result.value });
-                Swal.fire('Sucesso', 'Calendário renomeado!', 'success');
-            } catch (error) {
-                console.error('Erro ao renomear calendário:', error);
-                Swal.fire('Erro', 'Erro ao renomear calendário', 'error');
-            }
+    const handleSaveRename = async () => {
+        if (!editName.trim()) {
+            Swal.fire('Erro', 'Nome do calendário é obrigatório', 'error');
+            return;
+        }
+        try {
+            await updateCalendar(editingId, { name: editName.trim(), color: editColor });
+            setEditingId(null);
+        } catch {
+            Swal.fire('Erro', 'Erro ao salvar calendário', 'error');
         }
     };
 
@@ -85,46 +89,73 @@ export default function CalendarManager() {
                         key={calendar.id}
                         className={`calendar-item ${activeCalendarId === calendar.id ? 'active' : ''}`}
                     >
-                        <div className="calendar-info">
-                            <input
-                                type="checkbox"
-                                checked={visibleCalendars.includes(calendar.id)}
-                                onChange={() => toggleCalendarVisibility(calendar.id)}
-                                title="Mostrar/Ocultar calendário"
-                            />
-                            <div
-                                className="calendar-color"
-                                style={{ backgroundColor: calendar.color }}
-                                title="Cor do calendário"
-                            />
-                            <span
-                                className="calendar-name"
-                                onClick={() => setActiveCalendarId(calendar.id)}
-                                role="button"
-                                tabIndex="0"
-                            >
-                                {calendar.name}
-                            </span>
-                            {calendar.is_default && <span className="badge-default">Padrão</span>}
-                        </div>
-
-                        {!calendar.is_default && (
-                            <div className="calendar-actions">
-                                <button
-                                    onClick={() => handleRenameCalendar(calendar.id, calendar.name)}
-                                    title="Renomear"
-                                    className="btn-rename"
-                                >
-                                    ✏️
-                                </button>
-                                <button
-                                    onClick={() => handleDeleteCalendar(calendar.id)}
-                                    title="Deletar"
-                                    className="btn-delete"
-                                >
-                                    🗑️
-                                </button>
+                        {editingId === calendar.id ? (
+                            <div className="rename-form">
+                                <div className="form-input-row">
+                                    <input
+                                        type="text"
+                                        value={editName}
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveRename(); if (e.key === 'Escape') setEditingId(null); }}
+                                        autoFocus
+                                        placeholder="Nome do calendário"
+                                    />
+                                    <input
+                                        type="color"
+                                        value={editColor}
+                                        onChange={(e) => setEditColor(e.target.value)}
+                                        title="Escolher cor"
+                                    />
+                                </div>
+                                <div className="form-buttons-row">
+                                    <button onClick={handleSaveRename} className="btn-save">✓ Salvar</button>
+                                    <button onClick={() => setEditingId(null)} className="btn-cancel">✕ Cancelar</button>
+                                </div>
                             </div>
+                        ) : (
+                            <>
+                                <div className="calendar-info">
+                                    <input
+                                        type="checkbox"
+                                        checked={visibleCalendars.includes(calendar.id)}
+                                        onChange={() => toggleCalendarVisibility(calendar.id)}
+                                        title="Mostrar/Ocultar calendário"
+                                    />
+                                    <div
+                                        className="calendar-color"
+                                        style={{ backgroundColor: calendar.color }}
+                                        title="Cor do calendário"
+                                    />
+                                    <span
+                                        className="calendar-name"
+                                        onClick={() => setActiveCalendarId(calendar.id)}
+                                        role="button"
+                                        tabIndex="0"
+                                    >
+                                        {calendar.name}
+                                    </span>
+                                    {calendar.is_default && <span className="badge-default">Padrão</span>}
+                                </div>
+
+                                {!calendar.is_default && (
+                                    <div className="calendar-actions">
+                                        <button
+                                            onClick={() => handleRenameCalendar(calendar.id, calendar.name, calendar.color)}
+                                            title="Renomear"
+                                            className="btn-rename"
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteCalendar(calendar.id)}
+                                            title="Deletar"
+                                            className="btn-delete"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 ))}
@@ -141,29 +172,34 @@ export default function CalendarManager() {
 
             {isCreating && (
                 <div className="create-calendar-form">
-                    <input
-                        type="text"
-                        placeholder="Nome do calendário"
-                        value={newCalendarName}
-                        onChange={(e) => setNewCalendarName(e.target.value)}
-                    />
-                    <input
-                        type="color"
-                        value={newCalendarColor}
-                        onChange={(e) => setNewCalendarColor(e.target.value)}
-                    />
-                    <button onClick={handleCreateCalendar} className="btn-save">
-                        ✓ Criar
-                    </button>
-                    <button
-                        onClick={() => {
-                            setIsCreating(false);
-                            setNewCalendarName('');
-                        }}
-                        className="btn-cancel"
-                    >
-                        ✕ Cancelar
-                    </button>
+                    <div className="form-input-row">
+                        <input
+                            type="text"
+                            placeholder="Nome do calendário"
+                            value={newCalendarName}
+                            onChange={(e) => setNewCalendarName(e.target.value)}
+                        />
+                        <input
+                            type="color"
+                            value={newCalendarColor}
+                            onChange={(e) => setNewCalendarColor(e.target.value)}
+                            title="Escolher cor"
+                        />
+                    </div>
+                    <div className="form-buttons-row">
+                        <button onClick={handleCreateCalendar} className="btn-save">
+                            ✓ Criar
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsCreating(false);
+                                setNewCalendarName('');
+                            }}
+                            className="btn-cancel"
+                        >
+                            ✕ Cancelar
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
